@@ -67,6 +67,12 @@ Each iteration:
 - Final Accuracy: 97.18%
 
 ---
+## Future work
+
+Use SimCLR encoder in the pseudo-labeling pipeline
+Extend experiments to more complex datasets
+
+-- 
 
 ## Requirements
 
