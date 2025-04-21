@@ -55,7 +55,7 @@ I tackle the problem of learning from limited labels by combining:
 Each iteration:
 1. Train on labeled + previously pseudo-labeled data
 2. Predict on remaining unlabeled data
-3. Add only high-confidence predictions (threshold > 0.986)
+3. Add only high-confidence predictions (soften threshold at each iteration)
 
 ### Final Iteration (Iteration 5)
 - Remaining unlabeled: 905
