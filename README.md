@@ -6,7 +6,7 @@ This project explores the combination of **self-supervised learning (SimCLR)** a
 
 ## Overview
 
-We tackle the problem of learning from limited labels by combining:
+I tackle the problem of learning from limited labels by combining:
 - **SimCLR**: A contrastive self-supervised learning framework to pretrain a feature encoder.
 - **Linear probing / MLP classification**: To evaluate SimCLR representation quality.
 - **Semi-supervised CNN with Pseudo-labeling**: A supervised baseline that bootstraps predictions on unlabeled data with high-confidence thresholds.
