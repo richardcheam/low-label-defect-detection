@@ -1,6 +1,6 @@
 # SimCLR-Augmented-PseudoLabeling-MNIST
 
-This project explores the combination of **self-supervised learning (SimCLR)** and **semi-supervised learning with pseudo-labeling** for image classification on the MNIST dataset. The aim is to train performant models with very limited labeled data.
+This project explores the combination of **self-supervised learning (SimCLR)** and **semi-supervised learning with pseudo-labeling** for image classification on the MNIST dataset, but only having access to 100 labels. The aim is to train performant models with very limited labeled data.
 
 ---
 
