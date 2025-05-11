@@ -45,7 +45,7 @@ I tackle the problem of learning from limited labels by combining:
 - Augmented dataset size: 5100
 - Accuracy: 93.66%
 
-### 2. CNN + Pseudo-Labeling (One-Shot)
+### 2. CNN + Data Augmentation + Pseudo-Labeling 
 - Hard threshold: 0.99
 - Pseudo-labeled: 44,161 samples
 - Combined training set size: 49,261
