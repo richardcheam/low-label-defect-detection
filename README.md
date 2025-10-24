@@ -69,8 +69,8 @@ Each iteration:
 ---
 ## Future work
 
-Use SimCLR encoder in the pseudo-labeling pipeline
-Extend experiments to more complex datasets
+- Use SimCLR encoder in the pseudo-labeling pipeline
+- Extend experiments to more complex datasets
 
 -- 
 
