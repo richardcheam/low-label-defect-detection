@@ -7,10 +7,10 @@ from torch import nn
 class Encoder(nn.Module):
     output_dim = 4096
 
-    def __init__(self) -> None:
+    def __init__(self, input_channels: int = 1) -> None:
         super().__init__()
         self.layer1 = nn.Sequential(
-            nn.Conv2d(1, 64, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(input_channels, 64, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2),
@@ -30,11 +30,13 @@ class Encoder(nn.Module):
             nn.MaxPool2d(kernel_size=2, stride=2, padding=1),
             nn.Dropout(p=0.3),
         )
+        self.pool = nn.AdaptiveAvgPool2d((4, 4))
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         outputs = self.layer1(inputs)
         outputs = self.layer2(outputs)
         outputs = self.layer3(outputs)
+        outputs = self.pool(outputs)
         return outputs.view(outputs.size(0), -1)
 
 
@@ -81,9 +83,10 @@ class EncoderClassifier(nn.Module):
         encoder: Encoder | None = None,
         hidden_dim: int = 128,
         num_classes: int = 10,
+        input_channels: int = 1,
     ) -> None:
         super().__init__()
-        self.encoder = encoder if encoder is not None else Encoder()
+        self.encoder = encoder if encoder is not None else Encoder(input_channels=input_channels)
         self.classifier = nn.Sequential(
             nn.Linear(self.encoder.output_dim, hidden_dim),
             nn.ReLU(),

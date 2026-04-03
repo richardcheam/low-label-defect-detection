@@ -29,6 +29,7 @@ simclr-train = "simclr_hpl.cli.simclr:main"
 pseudo-label-train = "simclr_hpl.cli.pseudo_labeling:main"
 transfer-benchmark = "simclr_hpl.cli.transfer_benchmark:main"
 plot-results = "simclr_hpl.cli.plot_results:main"
+mvtec-inspection = "simclr_hpl.cli.mvtec_inspection:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/simclr_hpl"]

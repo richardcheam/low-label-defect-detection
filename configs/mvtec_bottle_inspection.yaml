@@ -1,0 +1,46 @@
+seed: 42
+device: auto
+output_dir: artifacts/mvtec_bottle_inspection
+
+data:
+  root: data/mvtec_ad
+  category: bottle
+  image_size: 224
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]
+  batch_size: 32
+  eval_batch_size: 64
+  pretrain_batch_size: 64
+  num_workers: 0
+
+simulation:
+  test_size: 0.25
+  validation_size: 0.2
+  labeled_normal: 40
+  labeled_defect: 10
+  augmentation_copies_per_transform: 2
+
+experiment:
+  initializations: ["random", "simclr"]
+
+train:
+  epochs: 10
+  iterative_epochs: 5
+  learning_rate: 0.0003
+
+pseudo_labeling:
+  threshold: 0.95
+  iterations: 3
+  threshold_decay: 0.01
+
+simclr_pretraining:
+  enabled: true
+  checkpoint_path: artifacts/mvtec_bottle_inspection/bottle_simclr_encoder.pt
+  epochs: 10
+  learning_rate: 0.0003
+  weight_decay: 0.0001
+  temperature: 0.2
+  projection_dim: 64
+
+business:
+  auto_decision_threshold: 0.98

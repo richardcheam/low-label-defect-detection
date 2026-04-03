@@ -98,6 +98,35 @@ def evaluate_classifier(
     }
 
 
+def collect_prediction_outputs(
+    model: nn.Module,
+    data_loader: DataLoader,
+    device: torch.device,
+) -> dict[str, list[float] | list[int]]:
+    model.eval()
+    probabilities: list[list[float]] = []
+    predictions: list[int] = []
+    targets_list: list[int] = []
+    confidences: list[float] = []
+    softmax = nn.Softmax(dim=1)
+    with torch.no_grad():
+        for inputs, targets in data_loader:
+            inputs = inputs.to(device)
+            logits = model(inputs)
+            probs = softmax(logits).cpu()
+            batch_confidences, batch_predictions = probs.max(dim=1)
+            probabilities.extend(probs.tolist())
+            predictions.extend(batch_predictions.tolist())
+            confidences.extend(batch_confidences.tolist())
+            targets_list.extend(targets.tolist())
+    return {
+        "probabilities": probabilities,
+        "predictions": predictions,
+        "targets": targets_list,
+        "confidences": confidences,
+    }
+
+
 def train_classifier(
     model: nn.Module,
     train_loader: DataLoader,

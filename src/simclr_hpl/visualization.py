@@ -18,6 +18,8 @@ def load_metrics(path: str | Path) -> dict[str, Any]:
 
 
 def infer_metrics_type(payload: dict[str, Any]) -> str:
+    if payload.get("dataset") == "mvtec_ad" and "results" in payload and "summary" in payload:
+        return "mvtec"
     if "benchmark_results" in payload and "summary" in payload:
         return "transfer"
     if "simclr" in payload and "linear_probe" in payload and "mlp_probe" in payload:
@@ -251,6 +253,58 @@ def plot_transfer_metrics(payload: dict[str, Any], output_dir: Path) -> list[Pat
     return created
 
 
+def plot_mvtec_metrics(payload: dict[str, Any], output_dir: Path) -> list[Path]:
+    created: list[Path] = []
+    summary = payload["summary"]
+    init_modes = [row["initialization"] for row in summary]
+
+    fig, ax = plt.subplots(figsize=(9, 5))
+    x_positions = list(range(len(init_modes)))
+    width = 0.35
+    ax.bar(
+        [x - width / 2 for x in x_positions],
+        [row["baseline_accuracy"] for row in summary],
+        width=width,
+        label="Baseline",
+        color="#6c757d",
+    )
+    ax.bar(
+        [x + width / 2 for x in x_positions],
+        [0.0 if row["final_iterative_accuracy"] is None else row["final_iterative_accuracy"] for row in summary],
+        width=width,
+        label="Iterative Pseudo-Labeling",
+        color="#1d3557",
+    )
+    ax.set_xticks(x_positions)
+    ax.set_xticklabels(init_modes)
+    ax.set_title(f"MVTec Accuracy Comparison: {payload['category']}")
+    ax.set_ylabel("Accuracy")
+    ax.legend()
+    accuracy_path = output_dir / "mvtec_accuracy_comparison.png"
+    save_figure(fig, accuracy_path)
+    created.append(accuracy_path)
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    metrics = ["auto_decision_rate", "review_queue_rate", "auto_defect_recall"]
+    metric_labels = ["Auto Decision Rate", "Review Queue Rate", "Auto Defect Recall"]
+    for index, row in enumerate(summary):
+        ax.plot(
+            metric_labels,
+            [row[metric] for metric in metrics],
+            marker="o",
+            linewidth=2,
+            label=row["initialization"],
+        )
+    ax.set_title(f"MVTec Inspection Business Metrics: {payload['category']}")
+    ax.set_ylabel("Rate")
+    ax.legend(title="Initialization")
+    business_path = output_dir / "mvtec_business_metrics.png"
+    save_figure(fig, business_path)
+    created.append(business_path)
+
+    return created
+
+
 def create_plots(metrics_path: str | Path, output_dir: str | Path | None = None) -> list[Path]:
     payload = load_metrics(metrics_path)
     metrics_type = infer_metrics_type(payload)
@@ -266,5 +320,7 @@ def create_plots(metrics_path: str | Path, output_dir: str | Path | None = None)
         return plot_pseudo_label_metrics(payload, resolved_output_dir)
     if metrics_type == "transfer":
         return plot_transfer_metrics(payload, resolved_output_dir)
+    if metrics_type == "mvtec":
+        return plot_mvtec_metrics(payload, resolved_output_dir)
     msg = f"Unexpected metrics type: {metrics_type}"
     raise ValueError(msg)

@@ -1,6 +1,6 @@
 UV ?= uv
 
-.PHONY: sync test lint format simclr pseudo benchmark plots
+.PHONY: sync test lint format simclr pseudo benchmark mvtec plots
 
 sync:
 	$(UV) sync --dev
@@ -22,6 +22,9 @@ pseudo:
 
 benchmark:
 	$(UV) run transfer-benchmark --config configs/transfer_pseudo_label_mnist.yaml
+
+mvtec:
+	$(UV) run mvtec-inspection --config configs/mvtec_bottle_inspection.yaml
 
 plots:
 	$(UV) run plot-results --metrics artifacts/transfer_benchmark_mnist/transfer_benchmark_metrics.json

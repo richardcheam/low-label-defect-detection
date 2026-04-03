@@ -1,11 +1,12 @@
 # SimCLR Hard Pseudo-Labeling
 
-This project studies label-efficient image learning on MNIST by combining:
+This project studies label-efficient image learning and manufacturing defect inspection by combining:
 
 - SimCLR-style self-supervised representation learning
 - linear probing and frozen-encoder MLP evaluation
 - semi-supervised CNN training with hard pseudo-labeling
 - iterative pseudo-label expansion under confidence thresholds
+- confidence-aware inspection workflows for manufacturing images
 
 The codebase is organized as a reproducible Python project with YAML configs, CLI entry points, tests, and CI.
 
@@ -60,6 +61,21 @@ Example:
 
 This project uses confidence thresholds so only high-confidence hard labels are added.
 
+### How this fits manufacturing defect detection
+
+For manufacturing inspection, the same ideas become:
+
+- a small set of expert-reviewed defect images
+- a much larger pool of unlabeled production images
+- automatic labeling only when the model is very confident
+- manual review for the uncertain cases
+
+That makes the project useful for questions like:
+
+- how many images can be auto-triaged safely?
+- how much inspection workload can be reduced?
+- does self-supervised pretraining help when defect labels are scarce?
+
 ## Original Results
 
 These were the initial project results.
@@ -84,6 +100,9 @@ These were the initial project results.
 ```text
 .
 ├── configs/                  # experiment configs
+├── data/                     # datasets
+│   └── mvtec_ad/
+│       └── bottle/           # MVTec AD bottle category
 ├── docs/                     # roadmap and project notes
 ├── archive/                  # archived notebooks
 ├── src/simclr_hpl/           # reusable package code
@@ -120,9 +139,21 @@ flowchart TD
     N --> O
 ```
 
+## Manufacturing Workflow
+
+For manufacturing-style experiments with MVTec AD, the workflow is:
+
+1. load one product category such as `bottle`
+2. turn the task into binary classification: `good` vs `defect`
+3. simulate a low-label setting with a small reviewed subset
+4. pretrain with SimCLR on the unlabeled pool
+5. train a defect classifier
+6. pseudo-label only the high-confidence unlabeled images
+7. evaluate both accuracy and review-queue metrics
+
 ## Current Workflow
 
-The project now supports three main experiment paths:
+The project now supports four main experiment paths:
 
 1. `simclr-train`
    Learn image representations without labels, then evaluate them with a linear probe and an MLP probe.
@@ -130,6 +161,8 @@ The project now supports three main experiment paths:
    Train with a small labeled set, generate confident pseudo-labels on unlabeled data, and retrain.
 3. `transfer-benchmark`
    Compare random initialization vs SimCLR initialization at multiple label budgets.
+4. `mvtec-inspection`
+   Run a manufacturing defect-detection workflow with MVTec AD and review-queue metrics.
 
 In short, the workflow is:
 
@@ -161,7 +194,7 @@ uv run pytest
 uv run ruff check .
 ```
 
-Optional shortcuts are available through [Makefile](/Users/macbookpro/Desktop/git/SimCLR-HardPseudoLabeling/Makefile), for example `make test`, `make benchmark`, and `make plots`.
+Optional shortcuts are available through [Makefile](/Users/macbookpro/Desktop/git/SimCLR-HardPseudoLabeling/Makefile), for example `make test`, `make benchmark`, `make mvtec`, and `make plots`.
 
 ### 4. Run the experiments
 
@@ -169,6 +202,7 @@ Optional shortcuts are available through [Makefile](/Users/macbookpro/Desktop/gi
 uv run simclr-train --config configs/simclr_mnist.yaml
 uv run pseudo-label-train --config configs/pseudo_label_mnist.yaml
 uv run transfer-benchmark --config configs/transfer_pseudo_label_mnist.yaml
+uv run mvtec-inspection --config configs/mvtec_bottle_inspection.yaml
 ```
 
 Artifacts and metrics are written under `artifacts/`.
@@ -179,6 +213,7 @@ Artifacts and metrics are written under `artifacts/`.
 uv run plot-results --metrics artifacts/simclr_mnist/metrics.json
 uv run plot-results --metrics artifacts/pseudo_label_mnist/metrics.json
 uv run plot-results --metrics artifacts/transfer_benchmark_mnist/transfer_benchmark_metrics.json
+uv run plot-results --metrics artifacts/mvtec_bottle_inspection/metrics.json
 ```
 
 By default, plots are written to a sibling `plots/` directory next to the metrics file.
@@ -211,6 +246,43 @@ Why this matters:
 
 That makes it easier to measure whether self-supervised pretraining improves sample efficiency when labels are limited.
 
+## MVTec AD Defect Inspection
+
+The MVTec workflow treats one product category at a time and simulates a realistic inspection setting:
+
+- `good` images represent normal production
+- non-`good` images represent defects
+- only a small reviewed subset is treated as labeled
+- the rest becomes the unlabeled production pool
+
+Expected dataset layout:
+
+```text
+data/mvtec_ad/
+└── bottle/
+    ├── train/good/
+    ├── test/good/
+    ├── test/broken_large/
+    ├── test/broken_small/
+    ├── test/contamination/
+    └── ground_truth/
+```
+
+Run it with:
+
+```bash
+uv run mvtec-inspection --config configs/mvtec_bottle_inspection.yaml
+```
+
+The output is not just accuracy. It also reports inspection-style metrics such as:
+
+- `auto_decision_rate`
+- `review_queue_rate`
+- `auto_decision_accuracy`
+- `auto_defect_recall`
+
+This makes the project easier to explain in business terms like workload reduction and safe automation.
+
 ## Project Structure
 
 - experiment logic lives in `src/simclr_hpl/`
@@ -236,6 +308,7 @@ The strongest visualizations for this repo are:
 - a pseudo-label growth plot: how many confident pseudo-labels are added per iteration
 - a confidence-threshold plot: threshold vs pseudo-label count vs final accuracy
 - a feature-space plot: t-SNE or UMAP of encoder features before and after transfer
+- an inspection-queue plot: auto-decision rate vs review-queue rate for MVTec runs
 
 My take: t-SNE can look nice, but it should not be the main evidence. For hiring and project credibility, the most important figures are the benchmark comparison plots and pseudo-labeling dynamics. Those show decision-making, not just pretty embeddings.
 
