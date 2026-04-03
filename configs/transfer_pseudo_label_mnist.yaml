@@ -1,0 +1,39 @@
+seed: 42
+device: auto
+output_dir: artifacts/transfer_benchmark_mnist
+
+data:
+  root: data
+  mean: 0.1307
+  std: 0.3081
+  batch_size: 64
+  eval_batch_size: 256
+  pretrain_batch_size: 256
+  num_workers: 0
+
+experiment:
+  validation_size: 0.2
+  augmentation_copies_per_transform: 10
+
+train:
+  epochs: 20
+  iterative_epochs: 10
+  learning_rate: 0.001
+
+pseudo_labeling:
+  threshold: 0.99
+  iterations: 5
+  threshold_decay: 0.002
+
+transfer_benchmark:
+  label_budgets: [100, 250, 500]
+  initializations: ["random", "simclr"]
+  simclr_checkpoint: artifacts/simclr_mnist/simclr_encoder.pt
+  train_simclr_if_missing: true
+
+simclr_pretraining:
+  epochs: 15
+  learning_rate: 0.001
+  weight_decay: 0.0
+  temperature: 0.5
+  projection_dim: 64

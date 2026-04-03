@@ -1,0 +1,25 @@
+seed: 42
+device: auto
+output_dir: artifacts/simclr_mnist
+
+data:
+  root: data
+  mean: 0.1307
+  std: 0.3081
+  pretrain_batch_size: 256
+  eval_batch_size: 256
+  num_workers: 0
+
+train:
+  epochs: 15
+  learning_rate: 0.001
+  weight_decay: 0.0
+  temperature: 0.5
+
+model:
+  projection_dim: 64
+
+evaluation:
+  validation_size: 0.2
+  epochs: 20
+  learning_rate: 0.001

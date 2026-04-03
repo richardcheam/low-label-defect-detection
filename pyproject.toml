@@ -1,0 +1,45 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "simclr-hard-pseudolabeling"
+version = "0.1.0"
+description = "Reproducible SimCLR and hard pseudo-labeling experiments on MNIST."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "matplotlib>=3.8",
+  "pyyaml>=6.0",
+  "scikit-learn>=1.5",
+  "seaborn>=0.13",
+  "torch>=2.2",
+  "torchvision>=0.17",
+  "tqdm>=4.66",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3",
+  "ruff>=0.11",
+]
+
+[project.scripts]
+simclr-train = "simclr_hpl.cli.simclr:main"
+pseudo-label-train = "simclr_hpl.cli.pseudo_labeling:main"
+transfer-benchmark = "simclr_hpl.cli.transfer_benchmark:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/simclr_hpl"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["*.ipynb"]
+
+[tool.uv]
+package = true

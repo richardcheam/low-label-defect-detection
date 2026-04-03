@@ -1,0 +1,14 @@
+.venv/
+.uv-cache/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+*.pyc
+artifacts/
+dist/
+build/
+*.pt
+*.pth
+*.png
+*.svg
+data/

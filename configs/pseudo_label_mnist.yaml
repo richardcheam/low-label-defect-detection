@@ -1,0 +1,26 @@
+seed: 42
+device: auto
+output_dir: artifacts/pseudo_label_mnist
+
+data:
+  root: data
+  mean: 0.1307
+  std: 0.3081
+  batch_size: 64
+  eval_batch_size: 256
+  num_workers: 0
+
+experiment:
+  labeled_per_class: 10
+  validation_size: 0.2
+  augmentation_copies_per_transform: 10
+
+train:
+  epochs: 20
+  iterative_epochs: 10
+  learning_rate: 0.001
+
+pseudo_labeling:
+  threshold: 0.99
+  iterations: 5
+  threshold_decay: 0.002
