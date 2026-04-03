@@ -11,6 +11,55 @@ The codebase is organized as a reproducible Python project with YAML configs, CL
 
 Reference paper: https://arxiv.org/abs/2002.05709
 
+## Core Ideas
+
+### What is SimCLR?
+
+SimCLR is a self-supervised learning method. Instead of training with labels like `0`, `1`, or `2`, it teaches a model to recognize that two different augmented versions of the same image still come from the same source image.
+
+In simple terms:
+
+- take one image
+- create two different augmented views of it
+- train the model to keep those two views close in feature space
+- push views from different images farther apart
+
+The goal is to learn a useful representation before doing classification.
+
+### What is linear probing?
+
+Linear probing is a simple way to test whether the learned representation is good.
+
+- freeze the encoder
+- put a very small classifier on top
+- train only that classifier
+
+If a simple linear layer works well, it usually means the encoder learned features that separate classes clearly.
+
+### What is pseudo-labeling?
+
+Pseudo-labeling is a semi-supervised learning method.
+
+- start with a small labeled dataset
+- train a model on it
+- run the model on unlabeled images
+- keep only predictions the model is very confident about
+- treat those predictions like temporary labels
+- retrain using both real labels and pseudo-labels
+
+This is useful when labeling data is expensive but unlabeled data is easy to get.
+
+### What does hard pseudo-labeling mean?
+
+Hard pseudo-labeling means the model picks one class as the label, such as `7`, instead of keeping the full probability distribution.
+
+Example:
+
+- soft label: `[0.01, 0.02, 0.93, ...]`
+- hard label: `2`
+
+This project uses confidence thresholds so only high-confidence hard labels are added.
+
 ## Original Results
 
 These were the initial project results.
@@ -76,11 +125,19 @@ flowchart TD
 The project now supports three main experiment paths:
 
 1. `simclr-train`
-   Pretrain an encoder with SimCLR and evaluate feature quality with a linear probe and an MLP probe.
+   Learn image representations without labels, then evaluate them with a linear probe and an MLP probe.
 2. `pseudo-label-train`
-   Train a low-label classifier, generate hard pseudo-labels on unlabeled data, and iterate.
+   Train with a small labeled set, generate confident pseudo-labels on unlabeled data, and retrain.
 3. `transfer-benchmark`
-   Compare pseudo-labeling performance from random initialization vs SimCLR initialization at multiple label budgets.
+   Compare random initialization vs SimCLR initialization at multiple label budgets.
+
+In short, the workflow is:
+
+1. learn features with SimCLR
+2. test how useful those features are
+3. train a low-label classifier
+4. add confident pseudo-labels from unlabeled images
+5. compare whether SimCLR initialization helps the low-label pipeline
 
 ## Professional Setup With `uv`
 
@@ -103,6 +160,8 @@ uv sync --dev
 uv run pytest
 uv run ruff check .
 ```
+
+Optional shortcuts are available through [Makefile](/Users/macbookpro/Desktop/git/SimCLR-HardPseudoLabeling/Makefile), for example `make test`, `make benchmark`, and `make plots`.
 
 ### 4. Run the experiments
 
@@ -144,6 +203,13 @@ uv run transfer-benchmark --config configs/transfer_pseudo_label_mnist.yaml
 ```
 
 If `artifacts/simclr_mnist/simclr_encoder.pt` does not exist yet, the benchmark can pretrain a SimCLR encoder automatically and reuse it for the comparison.
+
+Why this matters:
+
+- random initialization starts from scratch
+- SimCLR initialization starts with features learned from unlabeled data
+
+That makes it easier to measure whether self-supervised pretraining improves sample efficiency when labels are limited.
 
 ## Project Structure
 
