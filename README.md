@@ -7,13 +7,13 @@ This project studies label-efficient image learning on MNIST by combining:
 - semi-supervised CNN training with hard pseudo-labeling
 - iterative pseudo-label expansion under confidence thresholds
 
-The original work lived in notebooks and already produced strong results. This repo now includes a more professional baseline structure with a Python package, YAML configs, CLI entry points, tests, and CI so it can evolve into a stronger portfolio project for Data Scientist and ML/AI Engineer roles.
+The codebase is organized as a reproducible Python project with YAML configs, CLI entry points, tests, and CI.
 
 Reference paper: https://arxiv.org/abs/2002.05709
 
 ## Original Results
 
-These results came from the notebook-based version of the project.
+These were the initial project results.
 
 ### SimCLR pretraining
 
@@ -36,10 +36,11 @@ These results came from the notebook-based version of the project.
 .
 ├── configs/                  # experiment configs
 ├── docs/                     # roadmap and project notes
+├── archive/                  # archived notebooks
 ├── src/simclr_hpl/           # reusable package code
 ├── tests/                    # smoke tests
-├── SimCLR.ipynb              # legacy research notebook
-├── CNN_semi_supervised.ipynb # legacy research notebook
+├── archive/SimCLR.ipynb      # archived experiment notebook
+├── archive/CNN_semi_supervised.ipynb
 └── pyproject.toml            # uv-compatible project metadata
 ```
 
@@ -113,9 +114,19 @@ uv run transfer-benchmark --config configs/transfer_pseudo_label_mnist.yaml
 
 Artifacts and metrics are written under `artifacts/`.
 
-## New Extension: SimCLR Transfer Into Pseudo-Labeling
+### 5. Generate plots from saved metrics
 
-The most valuable new benchmark in this repo compares:
+```bash
+uv run plot-results --metrics artifacts/simclr_mnist/metrics.json
+uv run plot-results --metrics artifacts/pseudo_label_mnist/metrics.json
+uv run plot-results --metrics artifacts/transfer_benchmark_mnist/transfer_benchmark_metrics.json
+```
+
+By default, plots are written to a sibling `plots/` directory next to the metrics file.
+
+## SimCLR Transfer Into Pseudo-Labeling
+
+This benchmark compares:
 
 - random initialization
 - SimCLR-pretrained initialization
@@ -134,13 +145,13 @@ uv run transfer-benchmark --config configs/transfer_pseudo_label_mnist.yaml
 
 If `artifacts/simclr_mnist/simclr_encoder.pt` does not exist yet, the benchmark can pretrain a SimCLR encoder automatically and reuse it for the comparison.
 
-## What Was Reworked
+## Project Structure
 
-- Notebook logic has been lifted into `src/simclr_hpl/`
+- experiment logic lives in `src/simclr_hpl/`
 - experiments are config-driven through YAML files
 - `uv` is now the expected environment workflow
 - tests and GitHub Actions CI were added
-- the original notebooks are still kept as historical references
+- archived notebooks are kept under `archive/`
 
 ## Why This Is A Better Portfolio Project Now
 
@@ -164,9 +175,11 @@ My take: t-SNE can look nice, but it should not be the main evidence. For hiring
 
 If we keep extending this repo, I’d recommend adding a small plotting module that reads `artifacts/*/metrics.json` and automatically generates publication-style figures into `artifacts/plots/`.
 
+That plotting workflow is now built in through `plot-results`.
+
 ## Strong Portfolio Angle
 
-This project now lets you tell a stronger story than "I trained a model in notebooks":
+This project now lets you show a stronger story than a single experiment run:
 
 - you designed low-label learning experiments
 - you refactored them into a reproducible Python project

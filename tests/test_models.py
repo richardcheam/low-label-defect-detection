@@ -3,6 +3,7 @@ from torch.utils.data import ConcatDataset, TensorDataset
 
 from simclr_hpl.data import collect_labels
 from simclr_hpl.models import Encoder, EncoderClassifier, ProjectionHead, SemiSupervisedCNN
+from simclr_hpl.visualization import infer_metrics_type
 
 
 def test_encoder_and_projection_shapes():
@@ -34,3 +35,12 @@ def test_collect_labels_from_concat_dataset():
     second = TensorDataset(torch.randn(2, 1), torch.tensor([3, 4]))
     combined = ConcatDataset([first, second])
     assert collect_labels(combined) == [1, 2, 3, 4]
+
+
+def test_infer_metrics_type_for_supported_payloads():
+    assert infer_metrics_type({"simclr": {}, "linear_probe": {}, "mlp_probe": {}}) == "simclr"
+    assert (
+        infer_metrics_type({"baseline": {}, "single_round_pseudo_labeling": {}})
+        == "pseudo_label"
+    )
+    assert infer_metrics_type({"benchmark_results": {}, "summary": []}) == "transfer"

@@ -199,7 +199,7 @@ def main() -> None:
                 shuffle=False,
                 num_workers=data_config["num_workers"],
             )
-            new_pseudo_dataset, new_indices, confidences = generate_pseudo_labels(
+            new_pseudo_dataset, new_indices, new_confidences = generate_pseudo_labels(
                 model=pseudo_model,
                 data_loader=remaining_loader,
                 device=device,
@@ -239,7 +239,7 @@ def main() -> None:
                     "iteration": iteration + 1,
                     "threshold": current_threshold,
                     "new_pseudo_labels": len(new_indices),
-                    "avg_confidence": sum(confidences) / len(confidences),
+                    "avg_confidence": sum(new_confidences) / len(new_confidences),
                     "remaining_unlabeled": len(remaining_indices) - len(new_indices),
                     "test_accuracy": iteration_test["accuracy"],
                 }
