@@ -1,4 +1,4 @@
-"""SimCLR hard pseudo-labeling experiments."""
+"""Low-label defect detection workflows."""
 
 __all__ = ["__version__"]
 

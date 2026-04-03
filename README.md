@@ -1,4 +1,4 @@
-# SimCLR Hard Pseudo-Labeling
+# Low-Label Defect Detection
 
 This project studies label-efficient image learning and manufacturing defect inspection by combining:
 

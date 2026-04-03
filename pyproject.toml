@@ -3,9 +3,9 @@ requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
-name = "simclr-hard-pseudolabeling"
+name = "low-label-defect-detection"
 version = "0.1.0"
-description = "Reproducible SimCLR and hard pseudo-labeling experiments on MNIST."
+description = "Reproducible low-label image learning and defect detection workflows."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

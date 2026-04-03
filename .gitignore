@@ -7,6 +7,7 @@ __pycache__/
 artifacts/
 dist/
 build/
+docs/
 *.pt
 *.pth
 *.png
