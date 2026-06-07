@@ -63,6 +63,9 @@ def load_mnist(root: str | Path, train: bool) -> datasets.MNIST:
     return datasets.MNIST(root=str(root), train=train, transform=None, download=True)
 
 
+_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
+
+
 def load_mvtec_records(root: str | Path, category: str) -> list[dict[str, object]]:
     category_root = Path(root) / category
     if not category_root.exists():
@@ -78,7 +81,7 @@ def load_mvtec_records(root: str | Path, category: str) -> list[dict[str, object
             defect_type = defect_type_dir.name
             label = 0 if defect_type == "good" else 1
             for image_path in sorted(defect_type_dir.glob("*")):
-                if image_path.suffix.lower() not in {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}:
+                if image_path.suffix.lower() not in _IMAGE_SUFFIXES:
                     continue
                 records.append(
                     {
@@ -92,9 +95,6 @@ def load_mvtec_records(root: str | Path, category: str) -> list[dict[str, object
         msg = f"No image files found under {category_root}"
         raise FileNotFoundError(msg)
     return records
-
-
-_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
 
 
 def load_binary_image_records(
