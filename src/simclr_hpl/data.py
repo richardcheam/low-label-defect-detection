@@ -94,6 +94,40 @@ def load_mvtec_records(root: str | Path, category: str) -> list[dict[str, object
     return records
 
 
+_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
+
+
+def load_binary_image_records(
+    root: str | Path,
+    class_to_label: dict[str, int],
+) -> list[dict[str, object]]:
+    """Scan immediate subfolders of ``root`` and label images by folder name.
+
+    ``class_to_label`` maps a subfolder name to 0 (no-threat) or 1 (threat).
+    Folders not present in the mapping are skipped.
+    """
+    root_path = Path(root)
+    if not root_path.exists():
+        msg = f"X-ray data root does not exist: {root_path}"
+        raise FileNotFoundError(msg)
+
+    records: list[dict[str, object]] = []
+    for class_dir in sorted(p for p in root_path.iterdir() if p.is_dir()):
+        if class_dir.name not in class_to_label:
+            continue
+        label = int(class_to_label[class_dir.name])
+        for image_path in sorted(class_dir.rglob("*")):
+            if image_path.suffix.lower() not in _IMAGE_SUFFIXES:
+                continue
+            records.append(
+                {"path": image_path, "label": label, "class_name": class_dir.name}
+            )
+    if not records:
+        msg = f"No labeled images found under {root_path} for classes {list(class_to_label)}"
+        raise FileNotFoundError(msg)
+    return records
+
+
 def build_normalize_transform(
     mean: float = MNIST_MEAN,
     std: float = MNIST_STD,
