@@ -119,7 +119,17 @@ def main() -> None:
     probe_train, probe_val = build_train_val_subsets(
         eval_train, validation_size=eval_cfg["validation_size"], seed=config["seed"]
     )
-    train_loader = DataLoader(probe_train, batch_size=data_cfg["eval_batch_size"], shuffle=True)
+    # Drop a trailing partial batch during probe training so the frozen encoder's
+    # BatchNorm never receives a size-1 batch (raises in train mode). Guarded so a
+    # small low-label budget is never reduced to zero batches.
+    eval_batch_size = data_cfg["eval_batch_size"]
+    drop_last_train = len(probe_train) > eval_batch_size
+    train_loader = DataLoader(
+        probe_train,
+        batch_size=eval_batch_size,
+        shuffle=True,
+        drop_last=drop_last_train,
+    )
     val_loader = DataLoader(probe_val, batch_size=data_cfg["eval_batch_size"])
     test_loader = DataLoader(eval_test, batch_size=data_cfg["eval_batch_size"])
 
