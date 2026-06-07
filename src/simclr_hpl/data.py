@@ -311,6 +311,33 @@ def sample_by_class_counts(
     return sorted(labeled_indices), unlabeled_indices
 
 
+def subsample_per_class(
+    records: list[dict[str, object]],
+    max_per_class: int | None,
+    seed: int,
+) -> list[dict[str, object]]:
+    """Return at most ``max_per_class`` records for each integer ``label``.
+
+    ``None`` (or a cap >= the class count) keeps all records for that class.
+    Deterministic given ``seed``. Order of returned records is stable (sorted by
+    original position) so downstream splits are reproducible.
+    """
+    if max_per_class is None:
+        return list(records)
+    generator = random.Random(seed)
+    by_label: dict[int, list[int]] = {}
+    for index, record in enumerate(records):
+        by_label.setdefault(int(record["label"]), []).append(index)
+    keep: list[int] = []
+    for label in sorted(by_label):
+        indices = by_label[label]
+        if len(indices) > max_per_class:
+            indices = generator.sample(indices, max_per_class)
+        keep.extend(indices)
+    keep.sort()
+    return [records[i] for i in keep]
+
+
 def split_records_stratified(
     records: list[dict[str, object]],
     test_size: float,

@@ -17,6 +17,7 @@ from simclr_hpl.data import (
     build_train_val_subsets,
     load_binary_image_records,
     split_records_stratified,
+    subsample_per_class,
 )
 from simclr_hpl.models import LinearProbe, MLPProbe, ProjectionHead, build_encoder
 from simclr_hpl.training import (
@@ -110,7 +111,10 @@ def main() -> None:
     )
     save_checkpoint(output_dir / "xray_encoder.pt", {"encoder": encoder.state_dict()})
 
-    eval_train = ImagePathDataset(train_records, transform=eval_tf)
+    labeled_records = subsample_per_class(
+        train_records, data_cfg.get("max_labeled_per_class"), config["seed"]
+    )
+    eval_train = ImagePathDataset(labeled_records, transform=eval_tf)
     eval_test = ImagePathDataset(test_records, transform=eval_tf)
     probe_train, probe_val = build_train_val_subsets(
         eval_train, validation_size=eval_cfg["validation_size"], seed=config["seed"]
