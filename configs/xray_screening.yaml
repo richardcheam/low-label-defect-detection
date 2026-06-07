@@ -13,6 +13,7 @@ data:
   pretrain_batch_size: 64
   eval_batch_size: 64
   num_workers: 2
+  test_size: 0.2
   max_pretrain_images: 4000
   max_labeled_per_class: 500
 

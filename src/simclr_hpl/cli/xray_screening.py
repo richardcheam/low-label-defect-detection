@@ -62,8 +62,9 @@ def main() -> None:
     eval_cfg = config["evaluation"]
 
     records = load_binary_image_records(data_cfg["root"], data_cfg["class_to_label"])
+    test_size = data_cfg.get("test_size", 0.2)
     train_records, test_records = split_records_stratified(
-        records, test_size=0.2, seed=config["seed"]
+        records, test_size=test_size, seed=config["seed"]
     )
 
     image_size = int(data_cfg["image_size"])
