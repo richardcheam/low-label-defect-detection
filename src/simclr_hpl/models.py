@@ -93,6 +93,11 @@ class LinearProbe(nn.Module):
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         return self.classifier(self.encoder(inputs))
 
+    def train(self, mode: bool = True):
+        super().train(mode)
+        self.encoder.eval()  # frozen encoder: keep BatchNorm using fixed running stats
+        return self
+
 
 class MLPProbe(nn.Module):
     def __init__(self, encoder: nn.Module, num_classes: int = 10) -> None:
@@ -106,6 +111,11 @@ class MLPProbe(nn.Module):
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         return self.classifier(self.encoder(inputs))
+
+    def train(self, mode: bool = True):
+        super().train(mode)
+        self.encoder.eval()  # frozen encoder: keep BatchNorm using fixed running stats
+        return self
 
 
 class EncoderClassifier(nn.Module):
