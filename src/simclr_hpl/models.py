@@ -85,23 +85,23 @@ class ProjectionHead(nn.Module):
 
 
 class LinearProbe(nn.Module):
-    def __init__(self, encoder: Encoder) -> None:
+    def __init__(self, encoder: nn.Module, num_classes: int = 10) -> None:
         super().__init__()
         self.encoder = encoder
-        self.classifier = nn.Linear(encoder.output_dim, 10)
+        self.classifier = nn.Linear(encoder.output_dim, num_classes)
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         return self.classifier(self.encoder(inputs))
 
 
 class MLPProbe(nn.Module):
-    def __init__(self, encoder: Encoder) -> None:
+    def __init__(self, encoder: nn.Module, num_classes: int = 10) -> None:
         super().__init__()
         self.encoder = encoder
         self.classifier = nn.Sequential(
             nn.Linear(encoder.output_dim, 128),
             nn.ReLU(),
-            nn.Linear(128, 10),
+            nn.Linear(128, num_classes),
         )
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
