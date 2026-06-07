@@ -1,0 +1,36 @@
+seed: 42
+device: auto
+output_dir: artifacts/xray_screening
+
+data:
+  root: data/sixray
+  class_to_label:
+    positive: 1
+    negative: 0
+  image_size: 224
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]
+  pretrain_batch_size: 64
+  eval_batch_size: 64
+  num_workers: 2
+  test_size: 0.2
+  max_pretrain_images: 4000
+  max_labeled_per_class: 500
+
+model:
+  encoder: resnet18
+  input_channels: 3
+  pretrained: false
+  projection_dim: 128
+  num_classes: 2
+
+train:
+  epochs: 20
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  temperature: 0.5
+
+evaluation:
+  validation_size: 0.2
+  epochs: 15
+  learning_rate: 0.001

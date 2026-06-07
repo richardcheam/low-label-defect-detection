@@ -2,7 +2,16 @@ import torch
 from torch.utils.data import ConcatDataset, TensorDataset
 
 from simclr_hpl.data import collect_labels
-from simclr_hpl.models import Encoder, EncoderClassifier, ProjectionHead, SemiSupervisedCNN
+from simclr_hpl.models import (
+    Encoder,
+    EncoderClassifier,
+    LinearProbe,
+    MLPProbe,
+    ProjectionHead,
+    ResNet18Encoder,
+    SemiSupervisedCNN,
+    build_encoder,
+)
 from simclr_hpl.business import compute_review_queue_metrics
 from simclr_hpl.visualization import infer_metrics_type
 
@@ -46,6 +55,53 @@ def test_infer_metrics_type_for_supported_payloads():
     )
     assert infer_metrics_type({"benchmark_results": {}, "summary": []}) == "transfer"
     assert infer_metrics_type({"dataset": "mvtec_ad", "results": {}, "summary": []}) == "mvtec"
+
+
+def test_resnet18_encoder_output_shape():
+    encoder = ResNet18Encoder(input_channels=3, pretrained=False)
+    assert encoder.output_dim == 512
+    out = encoder(torch.randn(2, 3, 224, 224))
+    assert out.shape == (2, 512)
+
+
+def test_build_encoder_selects_variant():
+    assert isinstance(build_encoder("small", input_channels=1), Encoder)
+    assert isinstance(build_encoder("resnet18", input_channels=3), ResNet18Encoder)
+
+
+def test_probes_support_binary_num_classes():
+    encoder = ResNet18Encoder(input_channels=3)
+    linear = LinearProbe(encoder, num_classes=2)
+    mlp = MLPProbe(encoder, num_classes=2)
+    x = torch.randn(2, 3, 224, 224)
+    assert linear(x).shape == (2, 2)
+    assert mlp(x).shape == (2, 2)
+
+
+def test_probe_keeps_encoder_in_eval_and_freezes_batchnorm():
+    from simclr_hpl.models import LinearProbe, ResNet18Encoder
+    from simclr_hpl.training import freeze_module
+
+    encoder = ResNet18Encoder(input_channels=3)
+    freeze_module(encoder)
+    probe = LinearProbe(encoder, num_classes=2)
+    probe.train()  # mimic train_classifier's model.train()
+
+    assert encoder.training is False  # encoder stays in eval despite probe.train()
+
+    # running stats must not change across a training-mode forward+backward
+    bn = encoder.backbone.bn1
+    before_mean = bn.running_mean.clone()
+    optimizer = torch.optim.Adam(
+        [p for p in probe.parameters() if p.requires_grad], lr=1e-3
+    )
+    x = torch.randn(4, 3, 32, 32)
+    target = torch.tensor([0, 1, 0, 1])
+    loss = torch.nn.functional.cross_entropy(probe(x), target)
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+    assert torch.equal(bn.running_mean, before_mean)  # BN running stats frozen
 
 
 def test_review_queue_metrics_are_computed():

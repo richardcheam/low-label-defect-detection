@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import torch
 from torch import nn
+from torchvision import models as tv_models
 
 
 class Encoder(nn.Module):
@@ -40,6 +41,36 @@ class Encoder(nn.Module):
         return outputs.view(outputs.size(0), -1)
 
 
+class ResNet18Encoder(nn.Module):
+    def __init__(self, input_channels: int = 3, pretrained: bool = False) -> None:
+        super().__init__()
+        weights = tv_models.ResNet18_Weights.DEFAULT if pretrained else None
+        backbone = tv_models.resnet18(weights=weights)
+        if input_channels != 3:
+            backbone.conv1 = nn.Conv2d(
+                input_channels, 64, kernel_size=7, stride=2, padding=3, bias=False
+            )
+        backbone.fc = nn.Identity()
+        self.backbone = backbone
+        self.output_dim = 512
+
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+        return self.backbone(inputs)
+
+
+def build_encoder(
+    name: str = "small",
+    input_channels: int = 1,
+    pretrained: bool = False,
+) -> nn.Module:
+    if name == "small":
+        return Encoder(input_channels=input_channels)
+    if name == "resnet18":
+        return ResNet18Encoder(input_channels=input_channels, pretrained=pretrained)
+    msg = f"Unknown encoder name: {name!r} (expected 'small' or 'resnet18')"
+    raise ValueError(msg)
+
+
 class ProjectionHead(nn.Module):
     def __init__(self, input_dim: int = Encoder.output_dim, output_dim: int = 64) -> None:
         super().__init__()
@@ -54,27 +85,37 @@ class ProjectionHead(nn.Module):
 
 
 class LinearProbe(nn.Module):
-    def __init__(self, encoder: Encoder) -> None:
+    def __init__(self, encoder: nn.Module, num_classes: int = 10) -> None:
         super().__init__()
         self.encoder = encoder
-        self.classifier = nn.Linear(encoder.output_dim, 10)
+        self.classifier = nn.Linear(encoder.output_dim, num_classes)
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         return self.classifier(self.encoder(inputs))
 
+    def train(self, mode: bool = True):
+        super().train(mode)
+        self.encoder.eval()  # frozen encoder: keep BatchNorm using fixed running stats
+        return self
+
 
 class MLPProbe(nn.Module):
-    def __init__(self, encoder: Encoder) -> None:
+    def __init__(self, encoder: nn.Module, num_classes: int = 10) -> None:
         super().__init__()
         self.encoder = encoder
         self.classifier = nn.Sequential(
             nn.Linear(encoder.output_dim, 128),
             nn.ReLU(),
-            nn.Linear(128, 10),
+            nn.Linear(128, num_classes),
         )
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         return self.classifier(self.encoder(inputs))
+
+    def train(self, mode: bool = True):
+        super().train(mode)
+        self.encoder.eval()  # frozen encoder: keep BatchNorm using fixed running stats
+        return self
 
 
 class EncoderClassifier(nn.Module):

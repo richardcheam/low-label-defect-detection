@@ -63,6 +63,9 @@ def load_mnist(root: str | Path, train: bool) -> datasets.MNIST:
     return datasets.MNIST(root=str(root), train=train, transform=None, download=True)
 
 
+_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
+
+
 def load_mvtec_records(root: str | Path, category: str) -> list[dict[str, object]]:
     category_root = Path(root) / category
     if not category_root.exists():
@@ -78,7 +81,7 @@ def load_mvtec_records(root: str | Path, category: str) -> list[dict[str, object
             defect_type = defect_type_dir.name
             label = 0 if defect_type == "good" else 1
             for image_path in sorted(defect_type_dir.glob("*")):
-                if image_path.suffix.lower() not in {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}:
+                if image_path.suffix.lower() not in _IMAGE_SUFFIXES:
                     continue
                 records.append(
                     {
@@ -90,6 +93,37 @@ def load_mvtec_records(root: str | Path, category: str) -> list[dict[str, object
                 )
     if not records:
         msg = f"No image files found under {category_root}"
+        raise FileNotFoundError(msg)
+    return records
+
+
+def load_binary_image_records(
+    root: str | Path,
+    class_to_label: dict[str, int],
+) -> list[dict[str, object]]:
+    """Scan immediate subfolders of ``root`` and label images by folder name.
+
+    ``class_to_label`` maps a subfolder name to 0 (no-threat) or 1 (threat).
+    Folders not present in the mapping are skipped.
+    """
+    root_path = Path(root)
+    if not root_path.exists():
+        msg = f"X-ray data root does not exist: {root_path}"
+        raise FileNotFoundError(msg)
+
+    records: list[dict[str, object]] = []
+    for class_dir in sorted(p for p in root_path.iterdir() if p.is_dir()):
+        if class_dir.name not in class_to_label:
+            continue
+        label = int(class_to_label[class_dir.name])
+        for image_path in sorted(class_dir.rglob("*")):
+            if image_path.suffix.lower() not in _IMAGE_SUFFIXES:
+                continue
+            records.append(
+                {"path": image_path, "label": label, "class_name": class_dir.name}
+            )
+    if not records:
+        msg = f"No labeled images found under {root_path} for classes {list(class_to_label)}"
         raise FileNotFoundError(msg)
     return records
 
@@ -275,6 +309,33 @@ def sample_by_class_counts(
     labeled_lookup = set(labeled_indices)
     unlabeled_indices = [index for index in range(len(labels)) if index not in labeled_lookup]
     return sorted(labeled_indices), unlabeled_indices
+
+
+def subsample_per_class(
+    records: list[dict[str, object]],
+    max_per_class: int | None,
+    seed: int,
+) -> list[dict[str, object]]:
+    """Return at most ``max_per_class`` records for each integer ``label``.
+
+    ``None`` (or a cap >= the class count) keeps all records for that class.
+    Deterministic given ``seed``. Order of returned records is stable (sorted by
+    original position) so downstream splits are reproducible.
+    """
+    if max_per_class is None:
+        return list(records)
+    generator = random.Random(seed)
+    by_label: dict[int, list[int]] = {}
+    for index, record in enumerate(records):
+        by_label.setdefault(int(record["label"]), []).append(index)
+    keep: list[int] = []
+    for label in sorted(by_label):
+        indices = by_label[label]
+        if len(indices) > max_per_class:
+            indices = generator.sample(indices, max_per_class)
+        keep.extend(indices)
+    keep.sort()
+    return [records[i] for i in keep]
 
 
 def split_records_stratified(
