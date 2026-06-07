@@ -2,7 +2,16 @@ import torch
 from torch.utils.data import ConcatDataset, TensorDataset
 
 from simclr_hpl.data import collect_labels
-from simclr_hpl.models import Encoder, EncoderClassifier, ProjectionHead, SemiSupervisedCNN
+from simclr_hpl.models import (
+    Encoder,
+    EncoderClassifier,
+    LinearProbe,
+    MLPProbe,
+    ProjectionHead,
+    ResNet18Encoder,
+    SemiSupervisedCNN,
+    build_encoder,
+)
 from simclr_hpl.business import compute_review_queue_metrics
 from simclr_hpl.visualization import infer_metrics_type
 
@@ -46,6 +55,27 @@ def test_infer_metrics_type_for_supported_payloads():
     )
     assert infer_metrics_type({"benchmark_results": {}, "summary": []}) == "transfer"
     assert infer_metrics_type({"dataset": "mvtec_ad", "results": {}, "summary": []}) == "mvtec"
+
+
+def test_resnet18_encoder_output_shape():
+    encoder = ResNet18Encoder(input_channels=3, pretrained=False)
+    assert encoder.output_dim == 512
+    out = encoder(torch.randn(2, 3, 224, 224))
+    assert out.shape == (2, 512)
+
+
+def test_build_encoder_selects_variant():
+    assert isinstance(build_encoder("small", input_channels=1), Encoder)
+    assert isinstance(build_encoder("resnet18", input_channels=3), ResNet18Encoder)
+
+
+def test_probes_support_binary_num_classes():
+    encoder = ResNet18Encoder(input_channels=3)
+    linear = LinearProbe(encoder, num_classes=2)
+    mlp = MLPProbe(encoder, num_classes=2)
+    x = torch.randn(2, 3, 224, 224)
+    assert linear(x).shape == (2, 2)
+    assert mlp(x).shape == (2, 2)
 
 
 def test_review_queue_metrics_are_computed():
