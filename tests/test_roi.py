@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 
-from simclr_hpl.roi import compute_roi, image_level_decisions
+from simclr_hpl.roi import compute_roi, evaluate_roi, image_level_decisions, simulate_predictions
 
 
 def test_image_level_decisions_threshold_and_confidence():
@@ -37,3 +37,27 @@ def test_compute_roi_basic():
     # safety guardrail surfaced
     assert roi["missed_threat_rate"] == 0.01
     assert roi["auto_defect_recall"] == 0.95
+
+
+def test_evaluate_roi_chains_decision_to_roi():
+    # 3 threats (high scores) + 2 clean (low scores)
+    scores = [0.95, 0.92, 0.88, 0.10, 0.20]
+    targets = [1, 1, 1, 0, 0]
+    out = evaluate_roi(
+        scores, targets,
+        detection_threshold=0.5, auto_decision_threshold=0.9,
+        seconds_per_manual_review=12.0, inspector_hourly_cost=30.0,
+    )
+    assert "review_metrics" in out and "roi" in out
+    assert out["roi"]["total_bags"] == 5
+    # missed-threat safety guardrail is always present
+    assert "missed_threat_rate" in out["roi"]
+
+
+def test_simulate_predictions_is_deterministic_and_separable():
+    a = simulate_predictions(n_threat=50, n_clean=50, seed=7)
+    b = simulate_predictions(n_threat=50, n_clean=50, seed=7)
+    assert a == b  # deterministic
+    threat_mean = sum(p["score"] for p in a if p["target"] == 1) / 50
+    clean_mean = sum(p["score"] for p in a if p["target"] == 0) / 50
+    assert threat_mean > clean_mean  # threats score higher on average

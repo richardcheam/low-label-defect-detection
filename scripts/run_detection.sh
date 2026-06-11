@@ -17,3 +17,9 @@ uv run prepare-detection-data --yolo-root data/sixray_v3 --output-root data/sixr
 uv run xray-detect --config configs/sixray_detection.yaml
 
 # 4. browse results:  uv run mlflow ui
+
+# 5. (after detection) ROI report.  Real flow: produce predictions.json from the
+#    trained model on a mixed threat+clean test set, then:
+#      uv run xray-roi --config configs/roi.yaml --predictions predictions.json
+#    To preview the business-impact report NOW on simulated detections:
+uv run xray-roi --config configs/roi.yaml --simulate-threat 300 --simulate-clean 300

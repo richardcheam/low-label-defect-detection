@@ -21,6 +21,10 @@ inspector-hours and cost figures.
 
 from __future__ import annotations
 
+import random
+
+from simclr_hpl.business import compute_review_queue_metrics
+
 
 def image_level_decisions(
     image_scores: list[float],
@@ -135,3 +139,95 @@ def compute_roi(
         "missed_threat_rate": review_metrics.get("overall_false_negative_rate", 0.0),
         "auto_defect_recall": review_metrics.get("auto_defect_recall", 0.0),
     }
+
+
+def evaluate_roi(
+    scores: list[float],
+    targets: list[int],
+    *,
+    detection_threshold: float = 0.5,
+    auto_decision_threshold: float = 0.9,
+    total_bags: int | None = None,
+    seconds_per_manual_review: float = 12.0,
+    inspector_hourly_cost: float = 30.0,
+) -> dict[str, dict[str, float]]:
+    """Run the full score -> decision -> review-queue -> ROI pipeline.
+
+    This is the single entry point that chains :func:`image_level_decisions`,
+    ``business.compute_review_queue_metrics``, and :func:`compute_roi`,
+    so callers (e.g. the ``xray-roi`` CLI) only need a list of per-image
+    scores and ground-truth targets to obtain a full business-impact report.
+
+    Args:
+        scores: Per-image maximum detection score (0..1).
+        targets: Per-image ground-truth label (``1`` = threat, ``0`` = clean).
+        detection_threshold: Score threshold used to derive predictions, see
+            :func:`image_level_decisions`.
+        auto_decision_threshold: Confidence threshold above which a decision
+            is considered automatable (no manual review), see
+            ``business.compute_review_queue_metrics``.
+        total_bags: Total number of bags screened. Defaults to
+            ``len(scores)`` when ``None``.
+        seconds_per_manual_review: Average time an inspector spends manually
+            reviewing a single bag.
+        inspector_hourly_cost: Fully-loaded hourly cost of an inspector.
+
+    Returns:
+        A dict with two keys: ``"review_metrics"`` (the output of
+        ``business.compute_review_queue_metrics``) and ``"roi"`` (the output
+        of :func:`compute_roi`, including the safety guardrail metrics).
+    """
+    predictions, confidences = image_level_decisions(scores, detection_threshold)
+    review_metrics = compute_review_queue_metrics(
+        predictions, targets, confidences, auto_decision_threshold
+    )
+    roi = compute_roi(
+        review_metrics,
+        total_bags=total_bags if total_bags is not None else len(scores),
+        seconds_per_manual_review=seconds_per_manual_review,
+        inspector_hourly_cost=inspector_hourly_cost,
+    )
+    return {"review_metrics": review_metrics, "roi": roi}
+
+
+def simulate_predictions(
+    n_threat: int,
+    n_clean: int,
+    seed: int = 42,
+    skill: float = 0.85,
+) -> list[dict[str, float | int]]:
+    """Generate deterministic, separable fake per-image detection scores.
+
+    Useful for exercising the ROI reporting pipeline before real detector
+    inference results are available. The output matches the predictions
+    contract consumed by :func:`evaluate_roi`: a list of
+    ``{"score": float, "target": int}`` dicts.
+
+    Args:
+        n_threat: Number of simulated threat (``target == 1``) images.
+        n_clean: Number of simulated clean (``target == 0``) images.
+        seed: Seed for the deterministic ``random.Random`` generator.
+        skill: Detector "skill" in ``[0, 1]``. Higher values push threat
+            scores closer to 1 and clean scores closer to 0, increasing the
+            separation between the two distributions.
+
+    Returns:
+        A shuffled list of ``{"score": float, "target": int}`` dicts of
+        length ``n_threat + n_clean``, with scores clipped to ``[0, 1]``.
+    """
+    rng = random.Random(seed)
+
+    threat_mean = 0.5 + 0.4 * skill
+    clean_mean = 0.5 - 0.4 * skill
+    spread = 0.15
+
+    predictions: list[dict[str, float | int]] = []
+    for _ in range(n_threat):
+        score = max(0.0, min(1.0, rng.gauss(threat_mean, spread)))
+        predictions.append({"score": score, "target": 1})
+    for _ in range(n_clean):
+        score = max(0.0, min(1.0, rng.gauss(clean_mean, spread)))
+        predictions.append({"score": score, "target": 0})
+
+    rng.shuffle(predictions)
+    return predictions
