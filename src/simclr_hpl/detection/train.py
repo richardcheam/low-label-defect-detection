@@ -28,8 +28,13 @@ _VARIANT_TO_CLASS_NAME = {
 }
 
 
-def _resolve_model_class(variant: str) -> Any:
-    """Lazily import ``rfdetr`` and return the model class for ``variant``."""
+def resolve_model_class(variant: str) -> Any:
+    """Lazily import ``rfdetr`` and return the model class for ``variant``.
+
+    Shared between :mod:`simclr_hpl.detection.train` and
+    :mod:`simclr_hpl.detection.predict` so both modules agree on the
+    ``model.variant`` -> ``rfdetr`` class mapping.
+    """
     class_name = _VARIANT_TO_CLASS_NAME.get(variant)
     if class_name is None:
         msg = (
@@ -86,7 +91,7 @@ def train_detector(config: dict[str, Any], tracker: ExperimentTracker | None = N
         A summary dict (also written to ``<output_dir>/train_summary.json``)
         containing the echoed ``config`` and the resolved ``output_dir``.
     """
-    model_cls = _resolve_model_class(config["model"]["variant"])
+    model_cls = resolve_model_class(config["model"]["variant"])
 
     if tracker is None:
         tracking_cfg = config.get("tracking", {})

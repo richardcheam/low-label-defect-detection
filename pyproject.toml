@@ -38,6 +38,7 @@ mvtec-inspection = "simclr_hpl.cli.mvtec_inspection:main"
 xray-screening = "simclr_hpl.cli.xray_screening:main"
 prepare-detection-data = "simclr_hpl.cli.prepare_detection_data:main"
 xray-detect = "simclr_hpl.cli.detect:main"
+xray-predict = "simclr_hpl.cli.predict:main"
 xray-roi = "simclr_hpl.cli.roi_report:main"
 
 [tool.hatch.build.targets.wheel]

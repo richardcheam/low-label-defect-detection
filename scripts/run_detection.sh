@@ -18,8 +18,13 @@ uv run xray-detect --config configs/sixray_detection.yaml
 
 # 4. browse results:  uv run mlflow ui
 
-# 5. (after detection) ROI report.  Real flow: produce predictions.json from the
-#    trained model on a mixed threat+clean test set, then:
-#      uv run xray-roi --config configs/roi.yaml --predictions predictions.json
-#    To preview the business-impact report NOW on simulated detections:
+# 5. produce predictions.json from the trained model on threat + clean test images
+#    (checkpoint name depends on what rfdetr wrote to output_dir, e.g. checkpoint_best_total.pth)
+uv run xray-predict --checkpoint artifacts/sixray_detection/checkpoint_best_total.pth --variant nano \
+    --threat-dir data/sixray_v3/test/images --clean-dir data/clean_bags --out predictions.json
+
+# 6. ROI report from the real predictions
+uv run xray-roi --config configs/roi.yaml --predictions predictions.json
+
+# (preview without a model: ROI report on simulated detections)
 uv run xray-roi --config configs/roi.yaml --simulate-threat 300 --simulate-clean 300
