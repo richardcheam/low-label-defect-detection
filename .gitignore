@@ -1,5 +1,6 @@
 .venv/
 .uv-cache/
+.claude/
 .pytest_cache/
 .ruff_cache/
 __pycache__/
