@@ -10,13 +10,18 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
   "matplotlib>=3.8",
+  "mlflow>=2.16",
   "pyyaml>=6.0",
   "scikit-learn>=1.5",
   "seaborn>=0.13",
+  "supervision>=0.25",
   "torch>=2.2",
   "torchvision>=0.17",
   "tqdm>=4.66",
 ]
+
+[project.optional-dependencies]
+detection = ["rfdetr"]
 
 [dependency-groups]
 dev = [
@@ -31,6 +36,10 @@ transfer-benchmark = "simclr_hpl.cli.transfer_benchmark:main"
 plot-results = "simclr_hpl.cli.plot_results:main"
 mvtec-inspection = "simclr_hpl.cli.mvtec_inspection:main"
 xray-screening = "simclr_hpl.cli.xray_screening:main"
+prepare-detection-data = "simclr_hpl.cli.prepare_detection_data:main"
+xray-detect = "simclr_hpl.cli.detect:main"
+xray-predict = "simclr_hpl.cli.predict:main"
+xray-roi = "simclr_hpl.cli.roi_report:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/simclr_hpl"]

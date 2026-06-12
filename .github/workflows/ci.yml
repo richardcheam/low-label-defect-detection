@@ -12,6 +12,8 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.11"
+      - name: Install system libraries for OpenCV (pulled in by supervision)
+        run: sudo apt-get update && sudo apt-get install -y libgl1 libglib2.0-0
       - name: Install dependencies
         run: uv sync --dev
       - name: Ruff

@@ -13,3 +13,6 @@ docs/
 *.png
 *.svg
 data/
+mlruns/
+mlflow.db
+*.db

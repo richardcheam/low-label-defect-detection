@@ -194,7 +194,7 @@ uv run pytest
 uv run ruff check .
 ```
 
-Optional shortcuts are available through [Makefile](/Users/macbookpro/Desktop/git/SimCLR-HardPseudoLabeling/Makefile), for example `make test`, `make benchmark`, `make mvtec`, and `make plots`.
+Optional shortcuts are available through the [Makefile](Makefile), for example `make test`, `make benchmark`, `make mvtec`, and `make plots`.
 
 ### 4. Run the experiments
 
@@ -291,39 +291,10 @@ This makes the project easier to explain in business terms like workload reducti
 - tests and GitHub Actions CI were added
 - archived notebooks are kept under `archive/`
 
-## Why This Is A Better Portfolio Project Now
-
-- It shows both research experimentation and engineering discipline.
-- It is reproducible enough for reviewers to run locally.
-- It gives you a clear story around self-supervision, pseudo-label confidence thresholds, and working under extreme label scarcity.
-
 ## Visualization
 
-Visualization is worth investing in here. For a portfolio project, good figures make the difference between "interesting code" and "clear ML story."
-
-The strongest visualizations for this repo are:
-
-- a label-budget comparison plot: `100 vs 250 vs 500` labels for `random` and `simclr` initialization
-- a training-curve plot: train and validation accuracy or loss over epochs
-- a pseudo-label growth plot: how many confident pseudo-labels are added per iteration
-- a confidence-threshold plot: threshold vs pseudo-label count vs final accuracy
-- a feature-space plot: t-SNE or UMAP of encoder features before and after transfer
-- an inspection-queue plot: auto-decision rate vs review-queue rate for MVTec runs
-
-My take: t-SNE can look nice, but it should not be the main evidence. For hiring and project credibility, the most important figures are the benchmark comparison plots and pseudo-labeling dynamics. Those show decision-making, not just pretty embeddings.
-
-If we keep extending this repo, I’d recommend adding a small plotting module that reads `artifacts/*/metrics.json` and automatically generates publication-style figures into `artifacts/plots/`.
-
-That plotting workflow is now built in through `plot-results`.
-
-## Strong Portfolio Angle
-
-This project now lets you show a stronger story than a single experiment run:
-
-- you designed low-label learning experiments
-- you refactored them into a reproducible Python project
-- you benchmarked representation transfer from self-supervised pretraining into semi-supervised training
-
-That is much closer to how modern ML engineering work is presented.
-
-More ideas are in [docs/portfolio_roadmap.md](/Users/macbookpro/Desktop/git/SimCLR-HardPseudoLabeling/docs/portfolio_roadmap.md).
+Generate publication-style figures from saved metrics with `plot-results`, which reads
+`artifacts/*/metrics.json` and writes plots to a sibling `plots/` directory. Useful figures
+include label-budget comparisons (`random` vs `simclr` initialization across label budgets),
+training curves, pseudo-label growth per iteration, and the inspection-queue trade-off
+(auto-decision rate vs review-queue rate).

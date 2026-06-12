@@ -1,0 +1,11 @@
+detection_threshold: 0.5
+auto_decision_threshold: 0.9
+assumptions:
+  seconds_per_manual_review: 12.0
+  inspector_hourly_cost: 30.0
+  total_bags: null        # null -> number of predictions
+output_dir: artifacts/roi
+tracking:
+  enabled: true
+  experiment: sixray-roi
+  tracking_uri: null
