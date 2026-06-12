@@ -20,6 +20,7 @@ calling code does not need to branch on whether tracking is active.
 
 from __future__ import annotations
 
+import os
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any
 
@@ -29,6 +30,12 @@ if TYPE_CHECKING:
 
 try:
     import mlflow
+
+    # MLflow >= 3 puts the local file store ("./mlruns") in maintenance mode and
+    # raises unless this opt-out is set. We intentionally rely on the lightweight
+    # local file store for tracking, so enable it explicitly (must be set before
+    # any FileStore is created).
+    os.environ.setdefault("MLFLOW_ALLOW_FILE_STORE", "true")
 
     _HAS_MLFLOW = True
 except ImportError:
