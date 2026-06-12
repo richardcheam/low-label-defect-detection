@@ -38,10 +38,18 @@ def _load_model(variant: str, checkpoint: str | Path) -> Any:
     """Lazily import ``rfdetr`` and construct the model for ``variant``.
 
     Uses the documented ``pretrain_weights=`` constructor kwarg to load a
-    trained checkpoint.
+    trained checkpoint. Raises a clear ``FileNotFoundError`` if the checkpoint
+    path does not exist, rather than letting rfdetr fail opaquely.
     """
+    checkpoint_path = Path(checkpoint)
+    if not checkpoint_path.exists():
+        msg = (
+            f"Checkpoint not found: {checkpoint_path}. Train a detector with "
+            "`xray-detect` first, then pass its weights via --checkpoint."
+        )
+        raise FileNotFoundError(msg)
     model_cls = resolve_model_class(variant)
-    return model_cls(pretrain_weights=str(checkpoint))
+    return model_cls(pretrain_weights=str(checkpoint_path))
 
 
 def _list_images(directory: str | Path) -> list[Path]:

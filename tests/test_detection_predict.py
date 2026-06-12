@@ -40,7 +40,14 @@ def fake_rfdetr(monkeypatch):
     return calls
 
 
-def test_build_predictions_assigns_targets(tmp_path, fake_rfdetr):
+@pytest.fixture
+def checkpoint(tmp_path):
+    ckpt = tmp_path / "ckpt.pth"
+    ckpt.write_bytes(b"weights")
+    return ckpt
+
+
+def test_build_predictions_assigns_targets(tmp_path, fake_rfdetr, checkpoint):
     threat = tmp_path / "threat"
     clean = tmp_path / "clean"
     threat.mkdir()
@@ -50,37 +57,50 @@ def test_build_predictions_assigns_targets(tmp_path, fake_rfdetr):
     for i in range(2):
         Image.new("RGB", (16, 16)).save(clean / f"N{i}.jpg")
 
-    preds = build_predictions(threat, clean, variant="nano", checkpoint="ckpt.pth", threshold=0.5)
+    preds = build_predictions(threat, clean, variant="nano", checkpoint=checkpoint, threshold=0.5)
 
     assert len(preds) == 5
     assert sum(p["target"] for p in preds) == 3  # 3 threats labelled 1
     assert all(0.0 <= p["score"] <= 1.0 for p in preds)
     # model constructed with the documented pretrain_weights= kwarg
-    assert fake_rfdetr["init"] == {"pretrain_weights": "ckpt.pth"}
+    assert fake_rfdetr["init"] == {"pretrain_weights": str(checkpoint)}
     # threshold is forwarded to predict()
     assert all(t == 0.5 for t in fake_rfdetr["predict_calls"])
 
 
-def test_build_predictions_without_clean_dir_warns(tmp_path, fake_rfdetr):
+def test_build_predictions_without_clean_dir_warns(tmp_path, fake_rfdetr, checkpoint):
     threat = tmp_path / "threat"
     threat.mkdir()
     Image.new("RGB", (16, 16)).save(threat / "P0.jpg")
 
     with pytest.warns(UserWarning, match="clean"):
-        preds = build_predictions(threat, None, variant="nano", checkpoint="ckpt.pth")
+        preds = build_predictions(threat, None, variant="nano", checkpoint=checkpoint)
 
     assert len(preds) == 1
     assert preds[0]["target"] == 1
 
 
-def test_build_predictions_missing_clean_dir_warns(tmp_path, fake_rfdetr):
+def test_build_predictions_missing_clean_dir_warns(tmp_path, fake_rfdetr, checkpoint):
     threat = tmp_path / "threat"
     threat.mkdir()
     Image.new("RGB", (16, 16)).save(threat / "P0.jpg")
     missing_clean = tmp_path / "does_not_exist"
 
     with pytest.warns(UserWarning, match="clean"):
-        preds = build_predictions(threat, missing_clean, variant="nano", checkpoint="ckpt.pth")
+        preds = build_predictions(threat, missing_clean, variant="nano", checkpoint=checkpoint)
 
     assert len(preds) == 1
     assert preds[0]["target"] == 1
+
+
+def test_build_predictions_missing_checkpoint_raises(tmp_path, fake_rfdetr):
+    threat = tmp_path / "threat"
+    clean = tmp_path / "clean"
+    threat.mkdir()
+    clean.mkdir()
+    Image.new("RGB", (16, 16)).save(threat / "P0.jpg")
+
+    with pytest.raises(FileNotFoundError, match="Checkpoint not found"):
+        build_predictions(
+            threat, clean, variant="nano", checkpoint=tmp_path / "missing.pth"
+        )
