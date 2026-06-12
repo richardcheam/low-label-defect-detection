@@ -100,15 +100,23 @@ These were the initial project results.
 ```text
 .
 ├── configs/                  # experiment configs
-├── data/                     # datasets
-│   └── mvtec_ad/
-│       └── bottle/           # MVTec AD bottle category
-├── docs/                     # roadmap and project notes
+├── data/                     # datasets (DVC-tracked, gitignored)
+│   ├── mvtec_ad/
+│   │   └── bottle/           # MVTec AD bottle category
+│   └── sixray_v3/            # X-ray baggage detection dataset
+├── docs/                     # local notes (gitignored)
 ├── archive/                  # archived notebooks
-├── src/simclr_hpl/           # reusable package code
+├── scripts/                  # pipeline entrypoints (training, results)
+├── src/simclr_hpl/
+│   ├── detection/            # YOLO->COCO data prep, RF-DETR train/predict
+│   ├── tracking.py           # MLflow experiment tracking wrapper
+│   └── roi.py                # business-impact (ROI) calculations
 ├── tests/                    # smoke tests
 ├── archive/SimCLR.ipynb      # archived experiment notebook
 ├── archive/CNN_semi_supervised.ipynb
+├── dvc.yaml                  # reproducible pipeline stages
+├── Dockerfile                # CPU image for inference/reporting/tests
+├── docker-compose.yml        # app + MLflow UI services
 └── pyproject.toml            # uv-compatible project metadata
 ```
 
@@ -171,6 +179,88 @@ In short, the workflow is:
 3. train a low-label classifier
 4. add confident pseudo-labels from unlabeled images
 5. compare whether SimCLR initialization helps the low-label pipeline
+
+## X-ray Threat Detection Pipeline
+
+The project also includes an X-ray baggage threat-screening detection pipeline: RF-DETR
+object detection on a 5-class threat dataset (`Gun`, `Knife`, `Pliers`, `Scissors`,
+`Wrench`), with experiment tracking, business-impact (ROI) reporting, a DVC-versioned data
+and pipeline, and a CPU Docker image. It adds four console scripts:
+
+- `prepare-detection-data` — convert the YOLO-format dataset to COCO
+- `xray-detect` — train an RF-DETR detector
+- `xray-predict` — run a trained detector and write `predictions.json`
+- `xray-roi` — turn predictions into a business-impact (ROI) report
+
+### Data preparation (YOLO → COCO)
+
+RF-DETR trains on COCO-format datasets. Convert the Roboflow YOLO export once:
+
+```bash
+uv run prepare-detection-data --yolo-root data/sixray_v3 --output-root data/sixray_v3_coco
+```
+
+### Training the detector
+
+```bash
+uv sync --extra detection
+uv run xray-detect --config configs/sixray_detection.yaml
+```
+
+`rfdetr` is an optional, heavy, GPU-oriented dependency — install it with the `detection`
+extra only when training.
+
+### Predictions and ROI reporting
+
+```bash
+uv run xray-predict --checkpoint <path-to-checkpoint> --variant nano \
+    --threat-dir data/sixray_v3/test/images --clean-dir data/clean_bags --out predictions.json
+uv run xray-roi --config configs/roi.yaml --predictions predictions.json
+```
+
+Without a trained checkpoint or clean-bag images, a simulated report can be generated
+instead:
+
+```bash
+uv run xray-roi --config configs/roi.yaml --simulate-threat 300 --simulate-clean 300
+```
+
+The current dataset contains essentially no confirmed clean/negative bags, so the
+"auto-clear clean bags" ROI figures are a **projection from simulated inputs** until
+real clean-bag images are added. Detection accuracy measured on the test split is real,
+not simulated.
+
+### Experiment tracking (MLflow)
+
+Every training and reporting run logs params, metrics, and artifacts to a local `./mlruns`
+directory. Browse them with:
+
+```bash
+uv run mlflow ui
+```
+
+### Reproducible pipeline (DVC)
+
+`dvc.yaml` defines the pipeline as four stages: `prepare_data` → `train` → `predict` →
+`roi`. Configs (`configs/sixray_detection.yaml`, `configs/roi.yaml`) are tracked as
+pipeline params, so changing a hyperparameter invalidates the right stage. Run:
+
+```bash
+uv run dvc repro
+```
+
+The raw dataset and trained checkpoints are tracked by DVC (`*.dvc` pointer files in git,
+data in the local DVC cache). No remote storage is configured.
+
+### Docker
+
+```bash
+docker build -t xray-screening .
+docker run --rm xray-screening                                                  # run tests
+docker run --rm xray-screening xray-roi --config configs/roi.yaml \
+    --simulate-threat 300 --simulate-clean 300                                  # simulated ROI report
+docker compose up mlflow                                                        # MLflow UI on :5000
+```
 
 ## Professional Setup With `uv`
 

@@ -1,0 +1,56 @@
+stages:
+  prepare_data:
+    cmd: uv run prepare-detection-data --yolo-root data/sixray_v3 --output-root data/sixray_v3_coco
+    deps:
+      - data/sixray_v3
+      - src/simclr_hpl/detection/data.py
+    outs:
+      - data/sixray_v3_coco
+
+  # Realistically run on a separate CUDA box (rfdetr is a heavy, GPU-oriented
+  # optional extra). Frozen so `dvc repro` does not attempt GPU training on a
+  # CPU machine; the checkpoint is copied in from the GPU box and tracked via
+  # `dvc add artifacts/sixray_detection/checkpoint_best_total.pth`.
+  train:
+    cmd: uv run xray-detect --config configs/sixray_detection.yaml
+    deps:
+      - data/sixray_v3_coco
+      - src/simclr_hpl/detection/train.py
+      - configs/sixray_detection.yaml
+    params:
+      - configs/sixray_detection.yaml:
+          - seed
+          - model.variant
+          - train.epochs
+          - train.batch_size
+          - train.learning_rate
+    outs:
+      - artifacts/sixray_detection/checkpoint_best_total.pth:
+          persist: true
+    frozen: true
+
+  predict:
+    cmd: uv run xray-predict --checkpoint artifacts/sixray_detection/checkpoint_best_total.pth
+      --variant nano --threat-dir data/sixray_v3/test/images --clean-dir data/clean_bags
+      --out predictions.json
+    deps:
+      - artifacts/sixray_detection/checkpoint_best_total.pth
+      - data/sixray_v3/test/images
+      - src/simclr_hpl/detection/predict.py
+    outs:
+      - predictions.json
+
+  roi:
+    cmd: uv run xray-roi --config configs/roi.yaml --predictions predictions.json
+    deps:
+      - predictions.json
+      - src/simclr_hpl/roi.py
+    params:
+      - configs/roi.yaml:
+          - detection_threshold
+          - auto_decision_threshold
+          - assumptions.seconds_per_manual_review
+          - assumptions.inspector_hourly_cost
+    outs:
+      - artifacts/roi/report.json
+      - artifacts/roi/roi_summary.png

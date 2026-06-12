@@ -25,6 +25,7 @@ detection = ["rfdetr"]
 
 [dependency-groups]
 dev = [
+  "dvc>=3.50",
   "pytest>=8.3",
   "ruff>=0.11",
 ]

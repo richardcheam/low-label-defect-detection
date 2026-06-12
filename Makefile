@@ -1,6 +1,6 @@
 UV ?= uv
 
-.PHONY: sync test lint format simclr pseudo benchmark mvtec plots
+.PHONY: sync test lint format simclr pseudo benchmark mvtec plots results repro
 
 sync:
 	$(UV) sync --dev
@@ -28,3 +28,9 @@ mvtec:
 
 plots:
 	$(UV) run plot-results --metrics artifacts/transfer_benchmark_mnist/transfer_benchmark_metrics.json
+
+results:
+	bash scripts/run_results.sh
+
+repro:
+	$(UV) run dvc repro

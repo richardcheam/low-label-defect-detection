@@ -4,7 +4,8 @@
 .ruff_cache/
 __pycache__/
 *.pyc
-artifacts/
+.DS_Store
+artifacts/*
 dist/
 build/
 docs/
@@ -12,7 +13,18 @@ docs/
 *.pth
 *.png
 *.svg
-data/
+data/*
 mlruns/
 mlflow.db
 *.db
+predictions.json
+
+# DVC pointer files live under otherwise-ignored dirs - track them explicitly.
+!data/sixray_v3.dvc
+!data/sixray_v3_coco.dvc
+!data/clean_bags.dvc
+!artifacts/sixray_detection/
+artifacts/sixray_detection/*
+!artifacts/sixray_detection/*.dvc
+!dvc.yaml
+!dvc.lock
