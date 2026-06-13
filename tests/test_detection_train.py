@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from simclr_hpl.detection.train import train_detector
+from simclr_hpl.detection.train import _patch_map_metric_sync_on_compute, train_detector
 
 
 @pytest.fixture
@@ -125,6 +125,41 @@ def test_train_detector_logs_metrics_with_tracker(tmp_path, fake_rfdetr):
     assert runs.iloc[0]["params.epochs"] == "1"
     assert float(runs.iloc[0]["metrics.map"]) == pytest.approx(0.42)
     assert summary["output_dir"] == str(tmp_path / "out")
+
+
+def test_patch_map_metric_sync_on_compute_disables_dist_sync(monkeypatch):
+    class _FakeMeanAveragePrecision:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    torchmetrics_mod = types.ModuleType("torchmetrics")
+    torchmetrics_detection_mod = types.ModuleType("torchmetrics.detection")
+    torchmetrics_detection_mod.MeanAveragePrecision = _FakeMeanAveragePrecision
+
+    rfdetr_mod = types.ModuleType("rfdetr")
+    rfdetr_training_mod = types.ModuleType("rfdetr.training")
+    rfdetr_callbacks_mod = types.ModuleType("rfdetr.training.callbacks")
+    coco_eval_mod = types.ModuleType("rfdetr.training.callbacks.coco_eval")
+    coco_eval_mod.MeanAveragePrecision = _FakeMeanAveragePrecision
+
+    monkeypatch.setitem(sys.modules, "torchmetrics", torchmetrics_mod)
+    monkeypatch.setitem(sys.modules, "torchmetrics.detection", torchmetrics_detection_mod)
+    monkeypatch.setitem(sys.modules, "rfdetr", rfdetr_mod)
+    monkeypatch.setitem(sys.modules, "rfdetr.training", rfdetr_training_mod)
+    monkeypatch.setitem(sys.modules, "rfdetr.training.callbacks", rfdetr_callbacks_mod)
+    monkeypatch.setitem(sys.modules, "rfdetr.training.callbacks.coco_eval", coco_eval_mod)
+
+    _patch_map_metric_sync_on_compute()
+
+    patched = coco_eval_mod.MeanAveragePrecision
+    instance = patched(iou_type="bbox", class_metrics=True)
+    assert instance.kwargs == {"iou_type": "bbox", "class_metrics": True, "sync_on_compute": False}
+
+
+def test_patch_map_metric_sync_on_compute_noop_without_rfdetr():
+    # rfdetr/torchmetrics aren't importable in the CPU test environment;
+    # this must not raise.
+    _patch_map_metric_sync_on_compute()
 
 
 def test_train_detector_missing_results_file_does_not_crash(tmp_path, monkeypatch):

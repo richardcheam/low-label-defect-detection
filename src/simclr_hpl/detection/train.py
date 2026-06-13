@@ -77,6 +77,31 @@ def _maybe_log_results_metrics(tracker: ExperimentTracker, output_dir: Path) -> 
             pass
 
 
+def _patch_map_metric_sync_on_compute() -> None:
+    """Work around a torchmetrics DDP deadlock in rfdetr's validation callback.
+
+    ``rfdetr``'s ``COCOEvalCallback`` builds ``torchmetrics.detection.MeanAveragePrecision``
+    with the torchmetrics default ``sync_on_compute=True``. Under multi-GPU DDP,
+    ``compute()`` then calls ``metric.sync()``, which does a cross-rank ``all_gather``
+    that can deadlock and hang until the NCCL watchdog kills the job (see
+    Lightning-AI/torchmetrics#3199 and #626). Patch the ``MeanAveragePrecision`` name
+    in rfdetr's callback module so it always constructs with ``sync_on_compute=False``
+    (each rank then reports mAP from its own validation shard, avoiding the hang).
+
+    Best-effort: a no-op if ``rfdetr``/``torchmetrics`` aren't importable (e.g. in the
+    CPU test environment, where ``rfdetr`` is a minimal stub).
+    """
+    try:
+        from functools import partial
+
+        import rfdetr.training.callbacks.coco_eval as coco_eval_module
+        from torchmetrics.detection import MeanAveragePrecision
+    except ImportError:
+        return
+
+    coco_eval_module.MeanAveragePrecision = partial(MeanAveragePrecision, sync_on_compute=False)
+
+
 def train_detector(config: dict[str, Any], tracker: ExperimentTracker | None = None) -> dict:
     """Train an RF-DETR detector from a config dict.
 
@@ -122,6 +147,8 @@ def train_detector(config: dict[str, Any], tracker: ExperimentTracker | None = N
                 "coco_root": coco_root,
             }
         )
+
+        _patch_map_metric_sync_on_compute()
 
         model = model_cls()
         model.train(
