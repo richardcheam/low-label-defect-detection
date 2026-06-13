@@ -14,7 +14,19 @@ uv sync --extra detection
 uv run prepare-detection-data --yolo-root data/sixray_v3 --output-root data/sixray_v3_coco
 
 # 3. train RF-DETR (logs to local ./mlruns)
-uv run xray-detect --config configs/sixray_detection.yaml
+#    Multi-GPU: set NUM_GPUS to the number of GPUs to use (default 1). Uses
+#    torchrun for DDP and passes --devices auto so rfdetr uses all GPUs
+#    visible to the process group (per-GPU batch size stays as configured,
+#    so effective batch size scales with NUM_GPUS - adjust
+#    train.grad_accum_steps in the config if you need a fixed effective
+#    batch size).
+NUM_GPUS="${NUM_GPUS:-1}"
+if [ "$NUM_GPUS" -gt 1 ]; then
+    uv run torchrun --nproc_per_node="$NUM_GPUS" -m simclr_hpl.cli.detect \
+        --config configs/sixray_detection.yaml --devices auto
+else
+    uv run xray-detect --config configs/sixray_detection.yaml
+fi
 
 # 4. browse results:  uv run mlflow ui
 

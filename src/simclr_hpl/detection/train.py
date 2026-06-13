@@ -105,6 +105,9 @@ def train_detector(config: dict[str, Any], tracker: ExperimentTracker | None = N
     train_cfg = config["train"]
     coco_root = config["data"]["coco_root"]
 
+    devices = train_cfg.get("devices", 1)
+    grad_accum_steps = train_cfg.get("grad_accum_steps", 1)
+
     with tracker.run(run_name=f"rfdetr-{config['model']['variant']}"):
         tracker.log_params(
             {
@@ -112,6 +115,8 @@ def train_detector(config: dict[str, Any], tracker: ExperimentTracker | None = N
                 "epochs": train_cfg["epochs"],
                 "batch_size": train_cfg["batch_size"],
                 "learning_rate": train_cfg["learning_rate"],
+                "devices": devices,
+                "grad_accum_steps": grad_accum_steps,
                 "coco_root": coco_root,
             }
         )
@@ -123,6 +128,8 @@ def train_detector(config: dict[str, Any], tracker: ExperimentTracker | None = N
             batch_size=train_cfg["batch_size"],
             lr=train_cfg["learning_rate"],
             output_dir=str(output_dir),
+            devices=devices,
+            grad_accum_steps=grad_accum_steps,
         )
 
         tracker.log_artifact(output_dir)

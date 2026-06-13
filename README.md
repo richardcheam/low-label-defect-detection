@@ -120,7 +120,7 @@ These were the initial project results.
 └── pyproject.toml            # uv-compatible project metadata
 ```
 
-## Workflow Diagram
+## MNIST / SimCLR Workflow Diagram
 
 ```mermaid
 flowchart TD
@@ -191,6 +191,35 @@ and pipeline, and a CPU Docker image. It adds four console scripts:
 - `xray-detect` — train an RF-DETR detector
 - `xray-predict` — run a trained detector and write `predictions.json`
 - `xray-roi` — turn predictions into a business-impact (ROI) report
+
+### Pipeline Flow
+
+```mermaid
+flowchart TD
+    A[(data/sixray_v3 - YOLO export, DVC-tracked)] --> B[prepare-detection-data]
+    B --> C[(data/sixray_v3_coco - COCO format)]
+    C --> D[xray-detect - RF-DETR training, GPU box]
+    D --> E[(checkpoint_best_total.pth - DVC-tracked)]
+    D -.params/metrics.-> M[(MLflow tracking - ./mlruns)]
+
+    E --> F[xray-predict]
+    A --> F
+    G[(data/clean_bags - optional, not yet sourced)] --> F
+    F --> H[(predictions.json)]
+
+    H --> I[xray-roi]
+    I --> J[(report.json + roi_summary.png)]
+    I -.metrics.-> M
+
+    K[scripts/run_results.sh / make results] --> L{checkpoint exists?}
+    L -->|yes| F
+    L -->|no| N[xray-roi simulate mode - SIMULATED/PROJECTED report]
+```
+
+The full graph is also encoded as a DVC pipeline (`dvc.yaml`): `prepare_data` → `train`
+→ `predict` → `roi`, with `configs/sixray_detection.yaml` and `configs/roi.yaml` tracked
+as stage params. The `train` stage is currently frozen (no GPU on this machine) — its
+checkpoint is dropped in manually once produced on a CUDA box.
 
 ### Data preparation (YOLO → COCO)
 

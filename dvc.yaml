@@ -24,6 +24,7 @@ stages:
           - train.epochs
           - train.batch_size
           - train.learning_rate
+          - train.grad_accum_steps
     outs:
       - artifacts/sixray_detection/checkpoint_best_total.pth:
           persist: true
