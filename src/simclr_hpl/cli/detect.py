@@ -19,6 +19,15 @@ def parse_args() -> argparse.Namespace:
             "`torchrun --nproc_per_node=<N>` and pass --devices auto."
         ),
     )
+    parser.add_argument(
+        "--strategy",
+        default=None,
+        help=(
+            "Override train.strategy from the config (PTL Trainer(strategy=...)). "
+            "For multi-GPU, use 'ddp_find_unused_parameters_true' to avoid "
+            "'has parameters that were not used in producing loss' DDP errors."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -27,6 +36,8 @@ def main() -> None:
     config = load_config(args.config)
     if args.devices is not None:
         config.setdefault("train", {})["devices"] = args.devices
+    if args.strategy is not None:
+        config.setdefault("train", {})["strategy"] = args.strategy
     summary = train_detector(config)
     print(f"Saved training summary to {summary['output_dir']}/train_summary.json")
 

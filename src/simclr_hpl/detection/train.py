@@ -107,7 +107,7 @@ def train_detector(config: dict[str, Any], tracker: ExperimentTracker | None = N
 
     devices = train_cfg.get("devices", 1)
     grad_accum_steps = train_cfg.get("grad_accum_steps", 1)
-    find_unused_parameters = train_cfg.get("find_unused_parameters", False)
+    strategy = train_cfg.get("strategy", "auto")
 
     with tracker.run(run_name=f"rfdetr-{config['model']['variant']}"):
         tracker.log_params(
@@ -118,7 +118,7 @@ def train_detector(config: dict[str, Any], tracker: ExperimentTracker | None = N
                 "learning_rate": train_cfg["learning_rate"],
                 "devices": devices,
                 "grad_accum_steps": grad_accum_steps,
-                "find_unused_parameters": find_unused_parameters,
+                "strategy": strategy,
                 "coco_root": coco_root,
             }
         )
@@ -132,7 +132,7 @@ def train_detector(config: dict[str, Any], tracker: ExperimentTracker | None = N
             output_dir=str(output_dir),
             devices=devices,
             grad_accum_steps=grad_accum_steps,
-            find_unused_parameters=find_unused_parameters,
+            strategy=strategy,
         )
 
         tracker.log_artifact(output_dir)

@@ -23,7 +23,8 @@ uv run prepare-detection-data --yolo-root data/sixray_v3 --output-root data/sixr
 NUM_GPUS="${NUM_GPUS:-1}"
 if [ "$NUM_GPUS" -gt 1 ]; then
     uv run torchrun --nproc_per_node="$NUM_GPUS" -m simclr_hpl.cli.detect \
-        --config configs/sixray_detection.yaml --devices auto
+        --config configs/sixray_detection.yaml --devices auto \
+        --strategy ddp_find_unused_parameters_true
 else
     uv run xray-detect --config configs/sixray_detection.yaml
 fi
