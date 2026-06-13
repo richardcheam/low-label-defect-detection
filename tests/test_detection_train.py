@@ -54,6 +54,7 @@ def test_train_detector_invokes_rfdetr_and_logs(tmp_path, fake_rfdetr):
     assert fake_rfdetr["train"]["output_dir"] == str(tmp_path / "out")
     assert fake_rfdetr["train"]["devices"] == 1
     assert fake_rfdetr["train"]["grad_accum_steps"] == 1
+    assert fake_rfdetr["train"]["find_unused_parameters"] is False
     assert (tmp_path / "out").exists()
     assert summary["output_dir"] == str(tmp_path / "out")
     assert summary["config"] == config
@@ -63,11 +64,13 @@ def test_train_detector_passes_through_multi_gpu_settings(tmp_path, fake_rfdetr)
     config = _base_config(tmp_path)
     config["train"]["devices"] = "auto"
     config["train"]["grad_accum_steps"] = 4
+    config["train"]["find_unused_parameters"] = True
 
     train_detector(config)
 
     assert fake_rfdetr["train"]["devices"] == "auto"
     assert fake_rfdetr["train"]["grad_accum_steps"] == 4
+    assert fake_rfdetr["train"]["find_unused_parameters"] is True
 
 
 def test_train_detector_writes_train_summary(tmp_path, fake_rfdetr):

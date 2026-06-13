@@ -14,6 +14,7 @@ train:
   learning_rate: 0.0001
   devices: 1                        # number of GPUs ("auto" = all visible, requires torchrun)
   grad_accum_steps: 1               # effective_batch_size = batch_size * grad_accum_steps * devices
+  find_unused_parameters: true       # required by DDP for RF-DETR's auxiliary decoder losses
 
 tracking:
   enabled: true
