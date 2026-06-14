@@ -162,12 +162,34 @@ def parse_args() -> argparse.Namespace:
         description="Few-label + pseudo-box semi-supervised RF-DETR detection."
     )
     parser.add_argument("--config", type=Path, default=Path("configs/pseudo_box_detection.yaml"))
+    parser.add_argument(
+        "--devices",
+        default=None,
+        help=(
+            "Override train.devices from the config, e.g. '4' or 'auto'. "
+            "For multi-GPU, launch this command with "
+            "`torchrun --nproc_per_node=<N>` and pass --devices auto."
+        ),
+    )
+    parser.add_argument(
+        "--strategy",
+        default=None,
+        help=(
+            "Override train.strategy from the config (PTL Trainer(strategy=...)). "
+            "For multi-GPU, use 'ddp_find_unused_parameters_true' to avoid "
+            "'has parameters that were not used in producing loss' DDP errors."
+        ),
+    )
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
     config = load_config(args.config)
+    if args.devices is not None:
+        config.setdefault("train", {})["devices"] = args.devices
+    if args.strategy is not None:
+        config.setdefault("train", {})["strategy"] = args.strategy
     metrics = run_pseudo_box_detection(config)
     print(f"Saved metrics to {config['output_dir']}/metrics.json")
     print(f"Baseline: {metrics['baseline']}")
