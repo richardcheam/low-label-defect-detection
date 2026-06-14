@@ -291,6 +291,54 @@ docker run --rm xray-screening xray-roi --config configs/roi.yaml \
 docker compose up mlflow                                                        # MLflow UI on :5000
 ```
 
+### Real Training Results (4×GPU run)
+
+A full training run was completed on a separate 4-GPU CUDA machine: RF-DETR **nano**, 30
+epochs, per-GPU batch size 8 (effective batch size 32 across 4 GPUs, ~1.5 hours wall-clock).
+Per-epoch metrics, plots, real predictions, and the ROI report are committed under
+`artifacts/sixray_detection/` and `artifacts/roi/` — the checkpoint itself
+(`checkpoint_best_total.pth`) is too large to commit and stays on the training machine.
+
+**Training convergence** (`artifacts/sixray_detection/metrics.csv`):
+
+| Metric | Epoch 0 | Epoch 29 (final) | Best (epoch 27) |
+|---|---:|---:|---:|
+| `train/loss` | 5.75 | 3.41 | – |
+| `train/class_error` | 25.2% | 2.6% | – |
+| `val/mAP_50` | 0.671 | 0.889 | – |
+| `val/mAP_50_95` | 0.345 | 0.614 | **0.624** |
+| `val/mAR` | 0.631 | 0.734 | – |
+
+> ⚠️ These `val/*` numbers are **per-GPU / per-rank-local** (each of the 4 GPUs validated on
+> only ~1/4 of the validation set under DDP, a known tradeoff of the DDP setup used here).
+> The convergence *trend* is real; the absolute numbers are not full-validation-set mAP.
+
+![Validation mAP/mAR](artifacts/sixray_detection/plots/validation_map.png)
+![Training loss](artifacts/sixray_detection/plots/training_loss.png)
+![Per-class AP](artifacts/sixray_detection/plots/per_class_ap.png)
+
+**Business impact (ROI)** — real predictions on the full 831-image test set
+(`artifacts/roi/report.json`, not simulated):
+
+| Metric | Value |
+|---|---:|
+| Total bags screened | 831 |
+| Auto-decision rate | 44.3% |
+| Review queue rate | 55.7% |
+| Inspector hours saved | 1.23 h |
+| Cost saved | $36.80 |
+| **Missed-threat rate (safety guardrail)** | **4.21%** |
+| Auto defect recall | 40.07% |
+
+![ROI summary](artifacts/roi/roi_summary.png)
+
+The safety guardrail (`missed_threat_rate`) is always reported next to the time/cost
+savings by design (`roi.py`'s ROI calculations never run without it). The current test set
+is threat-only (no clean-bag images sourced yet), so `auto_decision_rate`/`review_queue_rate`
+describe this threat-only population, not a realistic mixed-traffic stream —
+`missed_threat_rate` and `auto_defect_recall` are the most representative numbers from this
+run.
+
 ## Professional Setup With `uv`
 
 ### 1. Install and pin Python
