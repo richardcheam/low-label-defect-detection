@@ -1,0 +1,31 @@
+seed: 42
+
+data:
+  coco_root: data/sixray_v3_coco   # produced by prepare-detection-data
+
+model:
+  variant: nano                    # nano | small | base
+
+output_dir: artifacts/pseudo_box_detection
+
+# Few-label split + iterative pseudo-box generation.
+pseudo_labeling:
+  label_fraction: 0.01             # fraction of train images kept as "real" labels
+  confidence_threshold: 0.9        # min detection confidence to accept a pseudo-box
+  threshold_decay: 0.05            # subtracted from the threshold each iteration (floor 0.5)
+  iterations: 3                    # number of pseudo-box generation + retrain rounds
+
+# Same training config as configs/sixray_detection.yaml, applied to every round
+# (round 0 = few-label baseline, rounds 1..iterations = pseudo-box retraining).
+train:
+  epochs: 30
+  batch_size: 8                    # per-GPU batch size
+  learning_rate: 0.0001
+  devices: 1                        # number of GPUs ("auto" = all visible, requires torchrun)
+  grad_accum_steps: 1               # effective_batch_size = batch_size * grad_accum_steps * devices
+  strategy: auto                     # use "ddp_find_unused_parameters_true" for multi-GPU
+
+tracking:
+  enabled: true
+  experiment: sixray-pseudo-box-detection
+  tracking_uri: null               # null -> local ./mlruns

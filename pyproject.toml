@@ -41,6 +41,7 @@ prepare-detection-data = "simclr_hpl.cli.prepare_detection_data:main"
 xray-detect = "simclr_hpl.cli.detect:main"
 xray-predict = "simclr_hpl.cli.predict:main"
 xray-roi = "simclr_hpl.cli.roi_report:main"
+xray-pseudo-box-detect = "simclr_hpl.cli.pseudo_box_detect:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/simclr_hpl"]

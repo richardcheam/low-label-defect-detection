@@ -102,6 +102,51 @@ def _patch_map_metric_sync_on_compute() -> None:
     coco_eval_module.MeanAveragePrecision = partial(MeanAveragePrecision, sync_on_compute=False)
 
 
+def run_training_round(
+    model_cls: Any,
+    dataset_dir: str | Path,
+    output_dir: str | Path,
+    train_cfg: dict[str, Any],
+) -> tuple[Any, dict[str, float]]:
+    """Train a fresh model instance on ``dataset_dir`` for one round.
+
+    Used by ``xray-pseudo-box-detect`` (:mod:`simclr_hpl.cli.pseudo_box_detect`)
+    to retrain from scratch each pseudo-labeling round on a growing dataset.
+    Unlike :func:`train_detector`, this has no tracking/seeding of its own —
+    the caller owns the :class:`ExperimentTracker` run and seeding.
+
+    Returns ``(model, metrics)``: ``model`` is the trained instance (reused
+    immediately afterwards for pseudo-label generation via ``model.predict``),
+    and ``metrics`` is whatever numeric scalars :func:`_read_numeric_metrics`
+    finds in ``results.json``/``metrics.json`` under ``output_dir`` (``{}`` if
+    neither file exists).
+    """
+    output_dir = ensure_dir(output_dir)
+    devices = train_cfg.get("devices", 1)
+    grad_accum_steps = train_cfg.get("grad_accum_steps", 1)
+    strategy = train_cfg.get("strategy", "auto")
+
+    model = model_cls()
+    model.train(
+        dataset_dir=str(dataset_dir),
+        epochs=train_cfg["epochs"],
+        batch_size=train_cfg["batch_size"],
+        lr=train_cfg["learning_rate"],
+        output_dir=str(output_dir),
+        devices=devices,
+        grad_accum_steps=grad_accum_steps,
+        strategy=strategy,
+    )
+
+    metrics: dict[str, float] = {}
+    for candidate in ("results.json", "metrics.json"):
+        results_path = output_dir / candidate
+        if results_path.exists():
+            metrics = _read_numeric_metrics(results_path)
+            break
+    return model, metrics
+
+
 def train_detector(config: dict[str, Any], tracker: ExperimentTracker | None = None) -> dict:
     """Train an RF-DETR detector from a config dict.
 
