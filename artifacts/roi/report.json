@@ -1,0 +1,25 @@
+{
+  "review_metrics": {
+    "auto_decision_accuracy": 0.904891304347826,
+    "auto_decision_rate": 0.4428399518652226,
+    "auto_defect_precision": 1.0,
+    "auto_defect_recall": 0.4007220216606498,
+    "overall_defect_recall": 0.9578820697954272,
+    "overall_false_negative_rate": 0.0421179302045728,
+    "review_queue_rate": 0.5571600481347774
+  },
+  "roi": {
+    "auto_cleared_bags": 368,
+    "auto_decision_rate": 0.4428399518652226,
+    "auto_defect_recall": 0.4007220216606498,
+    "cost_saved": 36.800000000000004,
+    "inspector_hours_automated": 1.5433333333333332,
+    "inspector_hours_baseline": 2.77,
+    "inspector_hours_saved": 1.2266666666666668,
+    "missed_threat_rate": 0.0421179302045728,
+    "review_queue_bags": 463,
+    "review_queue_rate": 0.5571600481347774,
+    "throughput_multiplier": 1.7948164146868253,
+    "total_bags": 831
+  }
+}

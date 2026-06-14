@@ -1,0 +1,26 @@
+{
+  "config": {
+    "data": {
+      "coco_root": "data/sixray_v3_coco"
+    },
+    "model": {
+      "variant": "nano"
+    },
+    "output_dir": "artifacts/sixray_detection",
+    "seed": 42,
+    "tracking": {
+      "enabled": true,
+      "experiment": "sixray-detection",
+      "tracking_uri": null
+    },
+    "train": {
+      "batch_size": 8,
+      "devices": "auto",
+      "epochs": 30,
+      "grad_accum_steps": 1,
+      "learning_rate": 0.0001,
+      "strategy": "ddp_find_unused_parameters_true"
+    }
+  },
+  "output_dir": "artifacts/sixray_detection"
+}
