@@ -1816,6 +1816,9 @@ dependencies = [
 detection = [
     { name = "rfdetr" },
 ]
+zeroshot = [
+    { name = "transformers" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -1836,8 +1839,9 @@ requires-dist = [
     { name = "torch", specifier = ">=2.2" },
     { name = "torchvision", specifier = ">=0.17" },
     { name = "tqdm", specifier = ">=4.66" },
+    { name = "transformers", marker = "extra == 'zeroshot'", specifier = ">=4.38" },
 ]
-provides-extras = ["detection"]
+provides-extras = ["detection", "zeroshot"]
 
 [package.metadata.requires-dev]
 dev = [

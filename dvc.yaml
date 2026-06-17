@@ -55,3 +55,29 @@ stages:
     outs:
       - artifacts/roi/report.json
       - artifacts/roi/roi_summary.png
+
+  # Phase 2a: few-label + pseudo-box semi-supervised detection.
+  # Frozen like `train` — runs on the 4-GPU box via torchrun. Copy
+  # artifacts/pseudo_box_detection/ back and run `make results-phase2`.
+  pseudo_box_detect:
+    cmd: >-
+      uv run torchrun --nproc_per_node=4 -m simclr_hpl.cli.pseudo_box_detect
+      --config configs/pseudo_box_detection.yaml --devices auto
+      --strategy ddp_find_unused_parameters_true
+    deps:
+      - data/sixray_v3_coco
+      - src/simclr_hpl/detection/pseudo_box.py
+      - src/simclr_hpl/cli/pseudo_box_detect.py
+      - configs/pseudo_box_detection.yaml
+    params:
+      - configs/pseudo_box_detection.yaml:
+          - seed
+          - model.variant
+          - pseudo_labeling.label_fraction
+          - pseudo_labeling.confidence_threshold
+          - pseudo_labeling.iterations
+          - train.epochs
+    outs:
+      - artifacts/pseudo_box_detection/metrics.json:
+          persist: true
+    frozen: true

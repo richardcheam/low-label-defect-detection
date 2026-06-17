@@ -60,6 +60,38 @@ def _read_numeric_metrics(path: Path) -> dict[str, float]:
     }
 
 
+_METRICS_CSV_VAL_KEYS = frozenset(
+    {"val/mAP_50", "val/mAP_50_95", "val/mAP_75", "val/mAR", "val/precision", "val/recall"}
+)
+
+
+def _read_metrics_csv(path: Path) -> dict[str, float]:
+    """Read the last full-epoch val metrics from rfdetr's ``metrics.csv``.
+
+    rfdetr writes one row per training step; val metrics appear only on rows
+    where the val evaluation ran (end of epoch). This function scans all rows
+    and keeps only the last non-empty value per val key, so the result reflects
+    the final training epoch.
+    """
+    import csv
+
+    result: dict[str, float] = {}
+    try:
+        with path.open(encoding="utf-8") as fh:
+            reader = csv.DictReader(fh)
+            for row in reader:
+                update = {
+                    k: float(v)
+                    for k, v in row.items()
+                    if k in _METRICS_CSV_VAL_KEYS and v.strip()
+                }
+                if update:
+                    result.update(update)
+    except Exception:  # noqa: BLE001 - best-effort, must never crash training
+        pass
+    return result
+
+
 def _maybe_log_results_metrics(tracker: ExperimentTracker, output_dir: Path) -> None:
     """Best-effort: if rfdetr wrote a metrics/results JSON, log its scalars.
 
@@ -144,6 +176,10 @@ def run_training_round(
         if results_path.exists():
             metrics = _read_numeric_metrics(results_path)
             break
+    if not metrics:
+        csv_path = output_dir / "metrics.csv"
+        if csv_path.exists():
+            metrics = _read_metrics_csv(csv_path)
     return model, metrics
 
 

@@ -24,6 +24,8 @@ def infer_metrics_type(payload: dict[str, Any]) -> str:
         return "transfer"
     if "simclr" in payload and "linear_probe" in payload and "mlp_probe" in payload:
         return "simclr"
+    if "n_labeled_images" in payload and "baseline" in payload and "iterations" in payload:
+        return "pseudo_box"
     if "baseline" in payload and "single_round_pseudo_labeling" in payload:
         return "pseudo_label"
     msg = "Unsupported metrics file format."
@@ -305,6 +307,90 @@ def plot_mvtec_metrics(payload: dict[str, Any], output_dir: Path) -> list[Path]:
     return created
 
 
+def _find_map_key(d: dict[str, Any]) -> str | None:
+    """Return the first numeric key containing 'map' (case-insensitive), or None."""
+    for key, val in d.items():
+        if "map" in key.lower() and isinstance(val, (int, float)):
+            return key
+    return None
+
+
+def plot_pseudo_box_metrics(payload: dict[str, Any], output_dir: Path) -> list[Path]:
+    """Generate Phase 2a pseudo-box detection plots from ``metrics.json``."""
+    created: list[Path] = []
+    iterations = payload.get("iterations", [])
+    baseline = payload["baseline"]
+    n_labeled = payload["n_labeled_images"]
+
+    # Phase 1 full-supervision mAP_50_95 reference line.
+    PHASE1_MAP = 0.624  # noqa: N806
+
+    # ── mAP progression ──────────────────────────────────────────────────────
+    map_key = _find_map_key(baseline)
+    if map_key is None and iterations:
+        map_key = _find_map_key(iterations[0])
+
+    if map_key is not None:
+        x_labels = [f"Baseline\n(1% labels, {n_labeled} imgs)"] + [
+            f"Round {it['iteration']}" for it in iterations
+        ]
+        map_values = [baseline.get(map_key, 0.0)] + [it.get(map_key, 0.0) for it in iterations]
+
+        fig, ax = plt.subplots(figsize=(max(7, 2 * len(x_labels) + 2), 5))
+        colors = ["#6c757d"] + ["#1d3557"] * len(iterations)
+        ax.bar(x_labels, map_values, color=colors, width=0.5)
+        ax.axhline(PHASE1_MAP, color="#e63946", linestyle="--", linewidth=1.5,
+                   label=f"Full supervision ({PHASE1_MAP:.3f})")
+        ax.set_title(f"mAP Progression: 1% Labels + Pseudo-Box ({map_key})")
+        ax.set_ylabel(map_key)
+        ax.set_ylim(0, max(PHASE1_MAP * 1.15, max(map_values) * 1.15, 0.1))
+        ax.legend()
+        map_path = output_dir / "pseudo_box_map_progression.png"
+        save_figure(fig, map_path)
+        created.append(map_path)
+
+    # ── Dataset growth ────────────────────────────────────────────────────────
+    round_labels = ["Round 0\n(baseline)"] + [f"Round {it['iteration']}" for it in iterations]
+    total_per_round = [baseline.get("n_images", n_labeled)] + [
+        it["n_train_images"] for it in iterations
+    ]
+    pseudo_per_round = [0] + [t - n_labeled for t in total_per_round[1:]]
+    labeled_per_round = [min(n_labeled, t) for t in total_per_round]
+
+    fig, ax = plt.subplots(figsize=(max(7, 2 * len(round_labels) + 2), 5))
+    ax.bar(round_labels, labeled_per_round, label=f"Labeled ({n_labeled})", color="#2a9d8f")
+    ax.bar(round_labels, pseudo_per_round, bottom=labeled_per_round,
+           label="Pseudo-labeled", color="#e9c46a")
+    ax.set_title("Training Set Growth Per Round")
+    ax.set_ylabel("Images")
+    ax.legend()
+    growth_path = output_dir / "pseudo_box_dataset_growth.png"
+    save_figure(fig, growth_path)
+    created.append(growth_path)
+
+    # ── Pseudo-label confidence per round ─────────────────────────────────────
+    if iterations:
+        round_nums = [it["iteration"] for it in iterations]
+        avg_confs = [it["avg_confidence"] for it in iterations]
+        thresholds = [it["confidence_threshold"] for it in iterations]
+
+        fig, ax = plt.subplots(figsize=(max(6, len(iterations) * 1.5 + 3), 5))
+        ax.bar([str(r) for r in round_nums], avg_confs, color="#457b9d",
+               label="Avg accepted confidence")
+        ax.step([str(r) for r in round_nums], thresholds, where="mid",
+                color="#e63946", linewidth=2, linestyle="--", label="Threshold")
+        ax.set_title("Pseudo-Box Confidence Per Round")
+        ax.set_xlabel("Round")
+        ax.set_ylabel("Confidence")
+        ax.set_ylim(0, 1.05)
+        ax.legend()
+        conf_path = output_dir / "pseudo_box_confidence.png"
+        save_figure(fig, conf_path)
+        created.append(conf_path)
+
+    return created
+
+
 def create_plots(metrics_path: str | Path, output_dir: str | Path | None = None) -> list[Path]:
     payload = load_metrics(metrics_path)
     metrics_type = infer_metrics_type(payload)
@@ -316,6 +402,8 @@ def create_plots(metrics_path: str | Path, output_dir: str | Path | None = None)
 
     if metrics_type == "simclr":
         return plot_simclr_metrics(payload, resolved_output_dir)
+    if metrics_type == "pseudo_box":
+        return plot_pseudo_box_metrics(payload, resolved_output_dir)
     if metrics_type == "pseudo_label":
         return plot_pseudo_label_metrics(payload, resolved_output_dir)
     if metrics_type == "transfer":

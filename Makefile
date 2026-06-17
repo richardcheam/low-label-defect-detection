@@ -1,6 +1,6 @@
 UV ?= uv
 
-.PHONY: sync test lint format simclr pseudo benchmark mvtec plots results repro
+.PHONY: sync test lint format simclr pseudo benchmark mvtec plots results results-phase2 results-zeroshot repro
 
 sync:
 	$(UV) sync --dev
@@ -31,6 +31,15 @@ plots:
 
 results:
 	bash scripts/run_results.sh
+
+results-phase2:
+	bash scripts/run_phase2_results.sh
+
+results-zeroshot:
+	$(UV) sync --extra zeroshot
+	$(UV) run xray-zeroshot --config configs/grounding_dino_zeroshot.yaml
+	$(UV) run xray-roi --config configs/roi_zeroshot.yaml \
+	    --predictions artifacts/grounding_dino_zeroshot/predictions.json
 
 repro:
 	$(UV) run dvc repro

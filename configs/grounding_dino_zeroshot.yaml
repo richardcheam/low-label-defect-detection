@@ -1,0 +1,25 @@
+model_id: IDEA-Research/grounding-dino-base   # downloaded on first run (~680MB)
+
+# Text prompts for each threat class. Grounding DINO will detect any object
+# described by these labels without task-specific training.
+text_labels:
+  - gun
+  - knife
+  - pliers
+  - scissors
+  - wrench
+
+# Detection confidence threshold. Lower than rfdetr (0.5) because zero-shot
+# models are generally less confident on out-of-distribution X-ray imagery.
+threshold: 0.3
+
+output_dir: artifacts/grounding_dino_zeroshot
+
+data:
+  threat_dir: data/sixray_v3/test/images
+  clean_dir: null   # set to data/clean_bags once available
+
+tracking:
+  enabled: false
+  experiment: grounding-dino-zeroshot
+  tracking_uri: null

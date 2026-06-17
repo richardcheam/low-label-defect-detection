@@ -339,6 +339,76 @@ describe this threat-only population, not a realistic mixed-traffic stream —
 `missed_threat_rate` and `auto_defect_recall` are the most representative numbers from this
 run.
 
+### Phase 2a: Few-Label + Pseudo-Box Detection
+
+**Question:** RF-DETR with only 1% of training labels — does pseudo-box iterative
+self-training recover the full-supervision gap?
+
+Setup: split the COCO training set 1%/99% (labeled/unlabeled); train a baseline RF-DETR
+nano on the labeled split; then iterate — each round the model generates pseudo-boxes on
+the unlabeled pool, confident detections above a decaying threshold are added to the
+training set, and the detector retrains from scratch. Three rounds at
+`confidence ≥ 0.9 → 0.85 → 0.80 → 0.75 (floor 0.50)`.
+
+> **Status: GPU run pending.** Run `make results-phase2` after copying
+> `artifacts/pseudo_box_detection/` from the GPU box.
+
+| Method | Labeled images | mAP\_50\_95 | Δ vs Phase 1 |
+|---|---:|---:|---:|
+| Phase 1 — full supervision | 11 636 (100%) | **0.624** | — |
+| Phase 2a baseline (1% labels) | ~116 | — | — |
+| Phase 2a round 1 | ~116 + pseudo | — | — |
+| Phase 2a round 2 | ~116 + pseudo | — | — |
+| Phase 2a round 3 (final) | ~116 + pseudo | — | — |
+
+To run (GPU box, 4×GPU DDP):
+
+```bash
+uv sync --extra detection
+uv run torchrun --nproc_per_node=4 -m simclr_hpl.cli.pseudo_box_detect \
+    --config configs/pseudo_box_detection.yaml \
+    --devices auto --strategy ddp_find_unused_parameters_true
+```
+
+Then generate plots and summary:
+
+```bash
+make results-phase2
+```
+
+### Phase 3: Zero-Shot Comparison (Grounding DINO)
+
+**Question:** How does a foundation model with zero task-specific training compare to
+RF-DETR trained on 100% of labels and 1% of labels?
+
+Grounding DINO (`IDEA-Research/grounding-dino-base` via HuggingFace `transformers`) is
+prompted with the five threat class names as free text — no fine-tuning, no bounding-box
+supervision. The output is a `predictions.json` directly compatible with `xray-roi`, so the
+same business-impact metrics can be compared across all three methods.
+
+> **Status: pending `make results-zeroshot` run.**
+
+| Method | Training labels | mAP\_50\_95 | Auto-decision rate | Missed-threat rate |
+|---|---|---:|---:|---:|
+| Grounding DINO (zero-shot) | 0 | — | — | — |
+| Phase 2a pseudo-box (1% labels) | ~116 + pseudo | — | — | — |
+| Phase 1 RF-DETR (full supervision) | 11 636 | **0.624** | 44.3% | 4.21% |
+
+To run (CPU, ~680 MB model download on first run):
+
+```bash
+uv sync --extra zeroshot
+make results-zeroshot
+```
+
+Or step by step:
+
+```bash
+uv run xray-zeroshot --config configs/grounding_dino_zeroshot.yaml
+uv run xray-roi --config configs/roi_zeroshot.yaml \
+    --predictions artifacts/grounding_dino_zeroshot/predictions.json
+```
+
 ## Professional Setup With `uv`
 
 ### 1. Install and pin Python
