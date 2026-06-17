@@ -21,10 +21,10 @@ if [ -f "$METRICS" ]; then
 
     echo
     echo "=== Summary ==="
-    python3 - <<'PYEOF'
+    python3 - "$METRICS" <<'PYEOF'
 import json, pathlib, sys
 
-path = pathlib.Path("artifacts/pseudo_box_detection/metrics.json")
+path = pathlib.Path(sys.argv[1])
 try:
     data = json.loads(path.read_text())
 except Exception as e:

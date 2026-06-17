@@ -158,6 +158,8 @@ def run_training_round(
     grad_accum_steps = train_cfg.get("grad_accum_steps", 1)
     strategy = train_cfg.get("strategy", "auto")
 
+    _patch_map_metric_sync_on_compute()
+
     model = model_cls()
     model.train(
         dataset_dir=str(dataset_dir),

@@ -55,6 +55,12 @@ def test_infer_metrics_type_for_supported_payloads():
     )
     assert infer_metrics_type({"benchmark_results": {}, "summary": []}) == "transfer"
     assert infer_metrics_type({"dataset": "mvtec_ad", "results": {}, "summary": []}) == "mvtec"
+    assert (
+        infer_metrics_type(
+            {"n_labeled_images": 116, "baseline": {}, "iterations": [], "label_fraction": 0.01}
+        )
+        == "pseudo_box"
+    )
 
 
 def test_resnet18_encoder_output_shape():
