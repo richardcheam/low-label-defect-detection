@@ -309,13 +309,54 @@ Per-epoch metrics, plots, real predictions, and the ROI report are committed und
 | `val/mAP_50_95` | 0.345 | 0.614 | **0.624** |
 | `val/mAR` | 0.631 | 0.734 | – |
 
-> ⚠️ These `val/*` numbers are **per-GPU / per-rank-local** (each of the 4 GPUs validated on
-> only ~1/4 of the validation set under DDP, a known tradeoff of the DDP setup used here).
-> The convergence *trend* is real; the absolute numbers are not full-validation-set mAP.
+> ⚠️ **Do not quote these `val/*` numbers as benchmark figures.** They are per-GPU /
+> per-rank-local: `_patch_map_metric_sync_on_compute` forces
+> `MeanAveragePrecision(sync_on_compute=False)` to avoid a torchmetrics DDP deadlock, so
+> under `--nproc_per_node=4` each rank scores only its own shard — about 415 of the 1,662
+> validation images and 794 of its 3,176 boxes. For `Scissors` (206 boxes in the split)
+> that is roughly 51 instances per rank.
+>
+> This is not a scaling artefact that averages out. mAP is not a mean over samples: average
+> precision is read off a precision/recall curve built by ranking *all* detections against
+> *all* ground truth, so a per-shard value is not an estimate of the full-split value. The
+> convergence *trend* here is real and the numbers are fine for model selection; the
+> absolute values are not full-validation-set mAP.
+>
+> **For a reportable number, run `xray-eval`** (below). It evaluates a checkpoint in a
+> single process over a whole split, using the same torchmetrics implementation, so
+> sharding is the only variable that changes.
 
 ![Validation mAP/mAR](artifacts/sixray_detection/plots/validation_map.png)
 ![Training loss](artifacts/sixray_detection/plots/training_loss.png)
 ![Per-class AP](artifacts/sixray_detection/plots/per_class_ap.png)
+
+### Reportable evaluation (`xray-eval`)
+
+Training-time validation is sharded (above). `xray-eval` runs one process over a whole
+COCO split and writes the mAP that is safe to publish:
+
+```bash
+uv run prepare-detection-data --yolo-root data/sixray_v3 --output-root data/sixray_v3_coco
+
+uv run xray-eval --checkpoint artifacts/sixray_detection/checkpoint_best_total.pth \
+    --annotations data/sixray_v3_coco/test/_annotations.coco.json \
+    --images-dir data/sixray_v3_coco/test \
+    --out artifacts/sixray_detection/eval_test.json
+```
+
+It reports `mAP_50_95`, `mAP_50`, `mAP_75`, `mAR_100` and per-class AP, and records
+`num_images` and `full_split` in the JSON so a `--limit` smoke run can never be mistaken
+for a complete one. It needs no GPU — CPU works, just slower.
+
+Two details that matter for correctness:
+
+- Detections are kept down to a score of **0.001**, not the 0.5 used by `xray-predict`.
+  mAP integrates the whole precision/recall curve, so a 0.5 cut truncates its tail and
+  silently understates every AP. The two commands answer different questions and correctly
+  use different thresholds.
+- `checkpoint_best_total.pth` was selected on the sharded metric, so "best epoch" carries
+  some selection noise. That affects which checkpoint you evaluate, not the correctness of
+  the number `xray-eval` reports for it.
 
 **Business impact (ROI)** — real predictions on the full 831-image test set
 (`artifacts/roi/report.json`, not simulated):

@@ -21,7 +21,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-detection = ["rfdetr"]
+detection = ["rfdetr", "torchmetrics>=1.0", "pycocotools>=2.0"]
 zeroshot = ["transformers>=4.38"]
 
 [dependency-groups]
@@ -43,6 +43,7 @@ xray-detect = "simclr_hpl.cli.detect:main"
 xray-predict = "simclr_hpl.cli.predict:main"
 xray-roi = "simclr_hpl.cli.roi_report:main"
 xray-pseudo-box-detect = "simclr_hpl.cli.pseudo_box_detect:main"
+xray-eval = "simclr_hpl.cli.evaluate_detection:main"
 xray-zeroshot = "simclr_hpl.cli.zeroshot_detect:main"
 
 [tool.hatch.build.targets.wheel]
