@@ -11,17 +11,22 @@ requires-python = ">=3.11"
 dependencies = [
   "matplotlib>=3.8",
   "mlflow>=2.16",
+  # compute_map() needs no model or GPU, so metric evaluation is core rather
+  # than part of the heavy `detection` extra. torchmetrics requires one of
+  # pycocotools / faster-coco-eval to be present or MeanAveragePrecision raises.
+  "pycocotools>=2.0",
   "pyyaml>=6.0",
   "scikit-learn>=1.5",
   "seaborn>=0.13",
   "supervision>=0.25",
   "torch>=2.2",
+  "torchmetrics>=1.0",
   "torchvision>=0.17",
   "tqdm>=4.66",
 ]
 
 [project.optional-dependencies]
-detection = ["rfdetr", "torchmetrics>=1.0", "pycocotools>=2.0"]
+detection = ["rfdetr"]
 zeroshot = ["transformers>=4.38"]
 
 [dependency-groups]
